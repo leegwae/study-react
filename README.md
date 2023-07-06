@@ -3,7 +3,6 @@
 (2023/07/05~)
 
 - https://react.dev/
-
 - https://react-ko.dev/
 
 ## One-way data flow
@@ -169,6 +168,19 @@ React Element 객체가 생성된다고 렌더링되진 않는다. 렌더링하�
 ## Props
 
 **props**는 부모 컴포넌트에서 자식 컴포넌트에게 전달하는 데이터이다. props는 변경 불가능한 값이다. props를 통한 데이터의 흐름은 단방향으로, 자식 컴포넌트에서는 부모 컴포넌트가 전달한 props를 바꿀 수 없다.
+
+### prop drilling
+
+state가 여러 컴포넌트 간 공유되어야 할 경우, 가장 가까운 공통 조상 컴포넌트로 state를 끌어올려 props로 전달해줄 수 있다. 그런데 props를 제공하는 컴포넌트와 사용하는 컴포넌트가 너무 멀리 떨어져있으면 전달이 어렵고 컴포넌트를 변경하는 게 어려운 상황이 생길 수 있다. 이러한 문제를 "prop drilling" 문제라고 한다.
+
+prop drilling 문제는 다음과 같은 방법으로 해결할 수 있다.
+
+1. state를 끌어올리지 않는다. 즉, 컴포넌트를 하위 컴포넌트로 쪼개지 않는다.
+2. state를 전역으로 올린다. [React의 Context API](#Context-API)나 외부 전역 상태 관리 라이브러리를 사용한다.
+
+> **출처**
+>
+> - https://react-ko.dev/learn/passing-data-deeply-with-context#the-problem-with-passing-props
 
 ## State
 
@@ -599,6 +611,63 @@ setNumber(42);
 
 일찍 리렌더링을 촉발하려면 `flushSync`를 사용한다. TODO: https://react-ko.dev/reference/react-dom/flushSync
 
+## Context API
+
+> **출처**
+>
+> - https://react-ko.dev/learn/passing-data-deeply-with-context
+
+React의 Context API를 사용하면 prop drilling 문제를 해결할 수 있다. 기본 사용 방식은 아래와 같다.
+
+1. **Create**: context를 생성한다.
+2. **Use**: 데이터가 필요한 컴포넌트에서 해당 context를 사용한다.
+3. **Provide**: 데이터를 명시하는 컴포넌트에서 해당 context를 제공한다.
+
+### 단계 1: context생성하기
+
+`createContext`로 context를 생성할 수 있다. context를 제공하지 않는다면 `defaultValue`가 사용된다. `defaultValue`를 절대 변경할 수 없다.
+
+```jsx
+export const MyContext = React.createContext(defaultValue);
+```
+
+### 단계 2: context 사용하기
+
+데이터를 사용할 컴포넌트에서 `useContext`에 context를 전달하면 컴포넌트는 해당 context에서 값을 읽을 수 있다. 컴포넌트는 UI 트리에서 가장 가까운 context provider가 지정한 값을 사용한다.
+
+```jsx
+function MyComponent() {
+    const myValue = React.useContext(MyContext);
+    
+    return <div>{myValue}</div>;
+}
+```
+
+### 단계 3: context 제공하기
+
+context provider 컴포넌트 하위의 컴포넌트는 모두 `useContext`를 사용하여 context가 제공하는 값을 읽을 수 있다.
+
+```jsx
+function Layout({ value, children }) {
+    return <MyContext.ContextProvider value={value}>{children}</MyContext.ContextProvider>
+}
+
+function App() {
+    return (
+        <Layout value={1}>
+            {/*이 <Layout> 하위의 <MyComponent>는 1을 렌더링한다 */}
+            <MyComponent />
+            <MyComponent />
+        </Layout>
+        <Layout value={2}>
+            {/*이 <Layout> 하위의 <MyComponent>는 2를 렌더링한다 */}
+            <MyComponent />
+            <MyComponent />
+        </Layout>
+    );
+}
+```
+
 ## Hooks
 
 Hooks는 React가 렌더링 중일 때만 사용할 수 있는 함수이다. Hooks를 통해 React의 기능들을 사용할 수 있는데, state가 이 중 하나이다.
@@ -665,7 +734,7 @@ const [state, setState] = React.useState(초기값);
   setState(state + 1); // 현재 렌더링 중인 state + 1로 교체한다
   ```
 
-[Batching - 업데이터 함수 사용하기](when-using-updater function)를 참고한다.
+[Batching - 업데이터 함수 사용하기](#when-using-updater function)를 참고한다.
 
 ### 기본 작동 방식
 
@@ -798,6 +867,109 @@ const handleClick = () => {
     setFn(() => myFunction);
 }
 ```
+
+## useContext
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useContext
+
+`useContext`는 컴포넌트가 context를 읽고 구독할 수 있도록 해주는 React Hook이다.
+
+```jsx
+const value = React.useContext(Context);
+```
+
+### 매개변수 `Context`
+
+`React.createContext`로 생성한 context 객체이다.
+
+### 반환값
+
+전달한 `Context`의 context 값을 반환한다.
+
+- 트리에서 가장 가까운 상위 `<Context.Provider>` 컴포넌트의 `value` props에 지정된 값을 반환한다.
+- context provider를 찾을 수 없다면 `createContext` 당시 전달했던 값을 반환한다.
+
+반환된 값은 항상 최신이다. React는 context가 변경되면, 변경된 값을 받은 context provider부터 context를 읽는 모든 자식 컴포넌트까지 리렌더링한다(즉, 그 사이에 context를 사용하지 않는 컴포넌트도 리렌더링의 대상이다).
+
+### React는 무엇을 기준으로 context가 변경되었다고 판단하는가?
+
+React는 `Object.is`로 context provider에 전달되었던 이전 값과 다음 값을 비교한다.
+
+### context는 어떻게 변경하는가?
+
+context에 값과 세터 함수를 넘기면 된다.
+
+```jsx
+import React from 'react';
+
+const UserContext = React.createContext(null);
+
+function Profile() {
+    const { user, setUser } = useContext(UserContext);
+    
+    return <div>{user.name}</div>;
+}
+
+function App() {
+    const [user, setUser] = useState(null);
+    
+    return (
+        <UserContext.Provider value={{ user, setUser }}>
+        	<Profile />
+        </UserContext.Provider>
+    );
+}
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useContext#updating-data-passed-via-context
+
+### context 값이 객체인 경우 최적화하기
+
+```jsx
+function App() {
+    const [user, setUser] = useState(null);
+    
+    function login(response) {
+        setUser(response.user);
+    }
+    
+    return (
+        <UserContext.Provider value={{ user, login }}>
+        	<Profile />
+        </UserContext.Provider>
+    );
+}
+```
+
+`App`이 리렌더링될 때마다 `user`와 `setUser`가 새로운 객체가 되므로, 매 렌더링마다 `<UserContext.Provider>` 내부에서 `useContext(UserContext)`를 호출하는 컴포넌트까지 모두 리렌더링된다. `user`가 "실제로" 변경되지 않는 한 리렌더링이 되지 않도록 `user`와 `setUser`의 계산 값을 메모이제이션할 수 있다.
+
+```jsx
+function App() {
+    const [user, setUser] = useState(null);
+    
+    const login = useCallback((response) => {
+        setUser(response.user);
+    }, []);
+    
+    const memoContext = useMemo(() => ({
+        user, login
+    }), [user, login]);
+    
+    return (
+        <UserContext.Provider value={memoContext}>
+        	<Profile />
+        </UserContext.Provider>
+    );
+}
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useContext#optimizing-re-renders-when-passing-objects-and-functions
 
 ***
 
