@@ -431,10 +431,11 @@ UI에서는 초기화를 하면서, state를 유지하고 싶을 수 있다. 카
 어떤 방식이든 `key`를 부여하는 것은 플레이어의 카운터는 구별되어야하므로 적절하다.
 
 > 주석: props에 의해 컴포넌트 내부의 값들이 계산되는 점을 사용하여, props에 의존하여 별도의 저장소로부터 데이터를 불러오게 하면 굳이 부모로 끌어올리지 않아도 된다.
+>
 > ```jsx
 > function Counter({ player }) {
->     const { count } = usePlayer(player);
->     return <div>{count}</div>
+>      const { count } = usePlayer(player);
+>      return <div>{count}</div>
 > }
 > ```
 
@@ -719,7 +720,7 @@ const [state, setState] = React.useState(초기값);
 
 ### `set` 함수
 
-`set` 함수에 전달된 값을 이용하여 **다음 렌더링의 state 값**을 지정할 수 있다. `set` 함수는 현재 렌더링 중인 state 값을 바꾸지 않는다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
+`set` 함수에 전달된 값을 이용하여 **다음 렌더링의 state 값**을 지정할 수 있다. `set` 함수는 현재 렌더링 중인 state 값을 바꾸지 않으며 다만 리렌더링을 촉발시킨다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
 
 - 함수인 경우, 이 함수는 업데이터 함수(updater function)로 취급한다. 업데이터 함수는 순수하며 결과만 반환해야한다. 업데이터 함수는 인자로 큐에 있는 이전 state의 값을 받는다.
 
@@ -734,7 +735,7 @@ const [state, setState] = React.useState(초기값);
   setState(state + 1); // 현재 렌더링 중인 state + 1로 교체한다
   ```
 
-[Batching - 업데이터 함수 사용하기](#when-using-updater function)를 참고한다.
+[Batching - 업데이터 함수 사용하기](#when-using-updater-function)를 참고한다.
 
 ### 기본 작동 방식
 
@@ -832,7 +833,7 @@ const handleClick = () => {
 }
 ```
 
-`set` 함수를 호출했는데도 로그에는 바뀐 값으로 출력되지 않아, 동기적으로 작동하지 않는다고 생각할 수 있다. 이것은 `set` 함수가 정말 `value`를 바꾼다면(`value = 'chagned'`) 동기적으로 작동하지 않는다는 말이 맞다. 그러나, `set` 함수를 호출하면 현재 렌더링 중인 state가 바뀌는 것이 아니라 다만 다음 렌더링의 state 값을 계산한다(다만 리렌더링을 촉발시킨다). 현재 렌더링 중인 state는 불변하며, 리렌더링이 촉발하여 다음 렌더링으로 넘어갔을 때 앞서 계산한 값을 현재의 state 값으로 저장한다.
+`set` 함수를 호출했는데도 로그에는 바뀐 값으로 출력되지 않아, 동기적으로 작동하지 않는다고 생각할 수 있다. 이것은 `set` 함수가 정말 `value`를 바꾼다면(`value = 'chagned'`) 동기적으로 작동하지 않는다는 말이 맞다. 그러나, `set` 함수를 호출하면 현재 렌더링 중인 state가 바뀌는 것이 아니라 다만 다음 렌더링의 state 값을 계산한다(=다만 리렌더링을 촉발시킨다). 현재 렌더링 중인 state는 불변하며, 리렌더링이 촉발하여 다음 렌더링으로 넘어갔을 때 앞서 계산한 값을 현재의 state 값으로 저장한다.
 
 이러한 경우 `set` 함수에 전달할 값을 따로 변수에 저장해야한다.
 
@@ -858,7 +859,7 @@ TODO: https://react-ko.dev/reference/react/useState#storing-information-from-pre
 - `useState`에 전달된 함수는 초기화 함수로 취급하므로 해당 함수를 호출하여 초기값을 저장하려고 시도한다.
 - `set` 함수에 전달된 함수는 업데이터 함수로 취급하므로 해당 함수를 호출하여 다음 렌더링의 state로 적용하려고 시도한다.
 
-함수를 state의 값으로 저장하려면 해당 함수 객체를 반환하는 함수를 전달한다.
+함수를 state의 값으로 지정하려면 해당 함수 객체를 반환하는 함수를 전달한다.
 
 ```jsx
 const [fn, setFn] = useState(() => myFunction);
@@ -970,6 +971,61 @@ function App() {
 > **출처**
 >
 > - https://react-ko.dev/reference/react/useContext#optimizing-re-renders-when-passing-objects-and-functions
+
+## useReducer
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useReducer
+
+`useReducer`를 사용하면 컴포넌트에서 state 업데이트 로직을 컴포넌트 외부의 순수 함수로 분리할 수 있다. 인자와 반환 값의 형태가 조금 다른 것을 제외하면 `useState`와 기본 동작은 동일하다.
+
+```jsx
+const [state, dispatch] = React.useReducer(reducer, initialArg, init?)
+```
+
+### 매개변수
+
+1. `reducer`: state가 업데이트되는 방식을 지정한 리듀서 함수(reducer function)이다. 순수 함수로, **이전 state**와 action을 인자로 받고 **다음 state를 반환**한다. action은 모든 값이 될 수 있으나 관례상 업데이트 로직을 구분하는 `type` 프로퍼티를 가진 객체이다.
+
+   ```jsx
+   function reducer(state, action) {
+       switch(action.type) {
+           case 'ADD_TASK': {
+               return [...state, { id: action.id, text: action.text }];
+           }
+           case 'DELETE_TASK': {
+               return state.filter(t => t.id !== action.id );
+           }
+       }
+   }
+   ```
+
+2. `initialArg`: 첫 렌더링에서 state의 값으로 사용할 초기값이다. 
+
+3. `init`(optional): 초기화 함수로, 이 함수를 전달하면 state는 `init(initialArg)`로 설정된다.
+
+### 반환값
+
+1. state 변수: 현재 렌더링 중인 state의 값을 저장하고 있다. 첫번째 렌더링 중의 값은 `initialArg` 또는 `init(initialArg)`와 일치한다.
+2. `dispatch` 함수: action을 전달하여 리렌더링을 촉발할 수 있다.
+
+### `disptach` 함수
+
+`dispatch`에 전달된 action을 이용하여 다음 렌더링의 state 값을 계산할 수 있다. `dispatch` 함수는 현재 렌더링 중인 state 값을 바꾸지 않는다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
+
+```jsx
+const [state, dispatch] = useReducer(reducer, []);
+
+function handleClick() {
+    dispatch({ type: 'ADD_TASK', id: uuid(), '집 사기' });
+}
+```
+
+### 기본 작동 방식
+
+1. `dispatch`가 유일한 인자로 action을 전달받는다.
+2. React가 `reducer`에 이전 state와 action을 넘겨 다음 state를 계산한다.
 
 ***
 
