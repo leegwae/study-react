@@ -7,7 +7,7 @@
 
 ## One-way data flow
 
-React는 컴포넌트 계층 구조를 따라 부모 컴포넌트에서 자식 컴포넌트로 내려 가는 단방향 데이터 흐름을 따른다. 기본적으로 자식 컴포넌트는 부모 컴포넌트의 데이터를 수정할 수 없으나 부모 컴포넌트가 props로 데이터를 수정할 수 있는 메서드를 전달하는 방식으로 역방향 데이터 흐름을 추가할 순 있다. 단방향 데이터 흐름은 양방향 데이터 흐름에 비해 작성해야할 것이 많지만 데이터의 흐름이 명확하여 상태를 추적하기 쉽다.
+React는 컴포넌트 계층 구조를 따라 부모 컴포넌트에서 자식 컴포넌트로 내려 가는 단방향 데이터 흐름을 따른다. 기본적으로 자식 컴포넌트는 부모 컴포넌트의 데이터를 수정할 수 없다. 부모 컴포넌트가 props로 데이터를 수정할 수 있는 메서드를 전달하는 방식으로 역방향 데이터 흐름을 추가할 순 있다. 단방향 데이터 흐름은 양방향 데이터 흐름에 비해 작성해야할 것이 많지만 데이터의 흐름이 명확하여 상태를 추적하기 쉽다.
 
 > **출처**
 >
@@ -159,7 +159,7 @@ function Greeting({ name }) {
 }
 ```
 
-React Element 객체가 생성된다고 렌더링되진 않는다. 렌더링하는 함수에 전달해야한다.
+React Element 객체가 생성된다고 렌더링되진 않는다.
 
 > **출처**
 >
@@ -469,7 +469,7 @@ React가 항목들을 고유하게 식별하기 위해서이다. 특히 리스�
 >
 > - https://react-ko.dev/learn/rendering-lists#why-does-react-need-keys
 
-## Rendering
+## Rendering and Committing
 
 > **출처**
 >
@@ -488,7 +488,7 @@ React에서 렌더링이 촉발되는 경우는 두 가지이다.
 1. **첫 렌더링(initial render)**: 컴포넌트의 첫 렌더링인 경우
 2. **리렌더링(re-render)**: 컴포넌트의 state나 조상 컴포넌트의 state 중 하나가 업데이트된 경우
 
-#### 첫 렌더링
+#### 첫 렌더링의 촉발
 
 ```jsx
 import Button from './Button.js';
@@ -500,7 +500,7 @@ root.render(<Button />);
 
 `createRoot`로 생성한 루트(root)의 `render()`에 컴포넌트를 전달하면 해당 컴포넌트의 첫 렌더링을 촉발한다. `render()`에 전달된 컴포넌트를 루트 컴포넌트(root component)라고 한다.
 
-#### 리렌더링
+#### 리렌더링의 촉발
 
 ```jsx
 import React from 'react';
@@ -553,8 +553,8 @@ function ColorPicker() {
 React는 단일 이벤트에 대해서는 이벤트 핸들러 내부의 `set` 함수를 묶어 실행한다. `set` 함수마다 리렌더링을 촉발시키지 않는다는 뜻이다. 기본적인 동작은 다음과 같다.
 
 1. 이벤트 핸들러의 코드를 실행하며 `set` 함수를 만날 때마다 큐에 넣는다.
-2. 다음 렌더링 도중 `useState`를 만나면 해당하는 큐를 순회하며 `set` 함수를 꺼내 실행한다.
-3. 최종 값(다음 렌더링의 state 값)을 계산한다.
+2. 렌더링 도중 `useState`를 만나면 해당하는 큐를 순회하며 `set` 함수를 꺼내 실행한다.
+3. 최종 값(렌더링의 state 값)을 계산한다.
 
 이것을 **batching**이라고 하며, React는 이 작업을 통해 리렌더링의 횟수를 줄이고 한 번의 리렌더링마다 많은 state 업데이트를 처리한다.
 
@@ -656,12 +656,12 @@ function Layout({ value, children }) {
 function App() {
     return (
         <Layout value={1}>
-            {/*이 <Layout> 하위의 <MyComponent>는 1을 렌더링한다 */}
+            {/*이 <Layout> 하위의 <MyComponent>는 1을 표시한다 */}
             <MyComponent />
             <MyComponent />
         </Layout>
         <Layout value={2}>
-            {/*이 <Layout> 하위의 <MyComponent>는 2를 렌더링한다 */}
+            {/*이 <Layout> 하위의 <MyComponent>는 2를 표시한다 */}
             <MyComponent />
             <MyComponent />
         </Layout>
@@ -720,19 +720,19 @@ const [state, setState] = React.useState(초기값);
 
 ### `set` 함수
 
-`set` 함수에 전달된 값을 이용하여 **다음 렌더링의 state 값**을 지정할 수 있다. `set` 함수는 현재 렌더링 중인 state 값을 바꾸지 않으며 다만 리렌더링을 촉발시킨다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
+`set` 함수에 전달된 값을 이용하여 **다음 렌더링의 state 값**을 지정할 수 있다. `set` 함수는 현재 렌더링의 state 값을 바꾸지 않으며 다만 리렌더링을 촉발시킨다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
 
 - 함수인 경우, 이 함수는 업데이터 함수(updater function)로 취급한다. 업데이터 함수는 순수하며 결과만 반환해야한다. 업데이터 함수는 인자로 큐에 있는 이전 state의 값을 받는다.
 
   ```jsx
-  setState(n => n + 1);	// 큐에 있는 이전 state + 1로 교체한다
+  setState(n => n + 1);	// 큐에 있는 이전 state에 1를 더한 값으로 교체한다.
   ```
 
 - 그 외의 값은 경우, 다음 렌더링의 state는 해당 값이 된다.
 
   ```jsx
   setState(2);	// 2로 교체한다
-  setState(state + 1); // 현재 렌더링 중인 state + 1로 교체한다
+  setState(state + 1); // 현재 렌더링 중인 state에 1을 더한 값으로 교체한다.
   ```
 
 [Batching - 업데이터 함수 사용하기](#when-using-updater-function)를 참고한다.
@@ -798,7 +798,7 @@ function useState(initialState) {
 
 ### React는 무엇을 기준으로 state가 변경되었다고 판단하는가?
 
-React는 `Object.is`로 현재 렌더링 중인 state와 `set` 함수에 전달된 값을 비교하여 같다고 판단하면 state가 업데이트되었다고 판단하고 리렌더링을 촉발시킨다.
+React는 `Object.is`로 이전 렌더링의 state와 `set` 함수에 전달된 값을 비교하여 같다고 판단하면 state가 업데이트되었다고 판단하고 리렌더링을 촉발시킨다.
 
 ```javascript
 if (Object.is(prevState, curState)) {
@@ -810,7 +810,7 @@ if (Object.is(prevState, curState)) {
 
 ### 왜 `set` 함수에 넘길 객체는 새로 생성해야하는가?
 
-`set` 함수에는 다음 렌더링에 적용할 값을 전달한다. React는 이 값과 현재 렌더링 중인 값을 `Object.is`로 비교하여 같으면 업데이트를 무시한다. 이에 따르면, 객체의 프로퍼티 값을 수정해도 동일한 객체를 가리키고 있으므로 업데이트가 무시된다. 그러니 새로운 객체를 생성하여 넘기도록 한다.
+`set` 함수에는 다음 렌더링에 적용할 값을 전달한다. React는 이 값과 전 렌더링의 값을 `Object.is`로 비교하여 같으면 업데이트를 무시한다. 이에 따르면, 객체의 프로퍼티 값을 수정해도 동일한 객체를 가리키고 있으므로 업데이트가 무시된다. 그러니 새로운 객체를 생성하여 넘기도록 한다.
 
 ```javascript
 // 😣: 기존 객체를 변이하여 넘기면 업데이트가 무시된다.
@@ -1021,7 +1021,7 @@ const [state, dispatch] = React.useReducer(reducer, initialArg, init?)
 
 ### `disptach` 함수
 
-`dispatch`에 전달된 action을 이용하여 다음 렌더링의 state 값을 계산할 수 있다. `dispatch` 함수는 현재 렌더링 중인 state 값을 바꾸지 않는다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
+`dispatch`에 전달된 action을 이용하여 다음 렌더링의 state 값을 계산할 수 있다. `dispatch` 함수는 현재 렌더링의 state 값을 바꾸지 않는다. 항상 한 렌더링 내의 state는 불변하며, state의 업데이트는 반드시 리렌더링을 촉발시킨다.
 
 ```jsx
 const [state, dispatch] = useReducer(reducer, []);
