@@ -1082,6 +1082,7 @@ function Foo() {
     return <div>{ref.current}</div>;
 }
 
+// 🥰: 이벤트 핸들러나 Effect에서 ref에 접근한다.
 function Bar() {
     useEffect(() => {
         ref.current = 13;
@@ -1275,7 +1276,7 @@ function MyForm() {
 
 `forwardRef` 렌더 함수로 ref를 전달받은 자식 컴포넌트는 `useImperativeHandle` 훅을 사용하여 부모에게 노출할 ref의 내용을 사용자 정의할 수 있다.
 
-https://react-ko.dev/learn/manipulating-the-dom-with-refs#exposing-a-subset-of-the-api-with-an-imperative-handle
+> 출처: https://react-ko.dev/learn/manipulating-the-dom-with-refs#exposing-a-subset-of-the-api-with-an-imperative-handle
 
 ### 기본 작동 방식
 
@@ -1286,10 +1287,18 @@ React에서 업데이트는 두 단계로 이루어진다.
 
 ref도 두 단계로 나누어보면 다음과 같다. DOM 노드를 참조하는 ref를 생각해보자.
 
-1. 첫 렌더링 동안은 DOM 노드가 화면에 추가되지 않았으므로 `ref.current`는 `null`이다. 그 후 상태 변경으로 인한 렌더링 동안에도 DOM 노드는 업데이트되지 않았다. 따라서 렌더링 동안에는 ref를 읽는 것이 적절하지 않다.
+1. 첫 렌더링 동안은 DOM 노드가 화면에 추가되지 않았으므로 `ref.current`는 `null`이다. 그 후 상태 변경으로 인한 렌더링 동안에도 DOM 노드는 변경 사항이 업데이트되지 않았다. 따라서 렌더링 동안에는 ref를 읽는 것이 적절하지 않다.
 2. 커밋하는 동안 `ref.current`가 설정된다. DOM이 업데이트되기 전에는 `null`로 설정햇다가 업데이트된 직후 해당 DOM 노드로 다시 설정한다.
 
 ref는 렌더링이 완료된 이후 side effect를 발생시키기 위해 사용하는 것이 일반적이다. 즉, 이벤트 핸들러나 Effect에서 접근한다.
+
+> 출처: https://react-ko.dev/learn/manipulating-the-dom-with-refs#when-react-attaches-the-refs
+
+### 조건부 렌더링에서 ref 사용하기
+
+(TODO) 안 됨 ref 콜백 써라.
+
+> 출처: https://medium.com/@teh_builder/ref-objects-inside-useeffect-hooks-eb7c15198780
 
 ## `ref` 콜백
 
@@ -1306,7 +1315,52 @@ ref는 렌더링이 완료된 이후 side effect를 발생시키기 위해 사�
 
 1. DOM 노드가 화면에 추가되면 React는 해당 DOM 노드를 인자로 `ref` 콜백을 호출한다.
 2. DOM 노드가 화면에서 제거되면 React는 `null`을 인자로 `ref` 콜백을 호출한다.
-3. 전달된 `ref` 콜백이 동일한 함수를 참조하지 않는다면 컴포넌트를 렌더링할 때마다 콜백이 분리되었다가 다시 연결된다. 즉, 컴포넌트가 재렌더링될 때 `null`로 `ref` 콜백을 호출하고 DOM 노드로 새로운 `ref` 콜백을 호출한다.
+3. 전달된 `ref` 콜백이 동일한 함수를 참조하지 않는다면 컴포넌트를 렌더링할 때마다 콜백이 분리되었다가 다시 연결된다. 즉, 컴포넌트가 재렌더링될 때 `null`로 `ref` 콜백을 호출하고 DOM 노드로 새로운 `ref` 콜백을 호출한다. (따라서 이 경우 `ref` 콜백은 `useCallback`을 사용하는 것이 적절하다.)
+
+예시로 알아보자.
+
+```jsx
+import React from 'react';
+
+export function App() {
+  const [state, setState] = React.useState(0);
+
+  function handleClick() {
+    setState(state + 1);
+  }
+
+  return <button ref={(node) => console.log(node)} onClick={handleClick}>{state}</button>
+}
+```
+
+1. 첫 렌더링 이후 버튼이 화면에 추가된다. DOM 노드로 ref 콜백을 호출하여 `<button ></button>`이 출력된다.
+2. 버튼을 누를 때마다 재렌더링이 실행된다. ref 콜백이 다시 계산되고, `null`로 ref 콜백을 호출하여 `null`이 출력된다. 커밋되면 DOM 노드로 ref 콜백을 호출하여 `<button ></button>`이 출력된다.
+
+### ref 콜백과 `useCallback`
+
+ref 콜백은 컴포넌트 렌더링마다 다시 생성되어 실행되므로, 이를 원하지 않는다면 `useCallback`으로 렌더링마다 ref 콜백이 새로 생성되지 않도록 한다.
+
+```jsx
+import React from 'react';
+
+export function App() {
+  const [state, setState] = React.useState(0);
+  const refCallback = React.useCallback((node) => {
+    console.log(node);
+  }, []);
+
+  function handleClick() {
+    setState(state + 1);
+  }
+
+  return <button ref={refCallback} onClick={handleClick}>{state}</button>
+}
+```
+
+1. 첫 렌더링 이후 버튼이 화면에 추가된다. DOM 노드로 ref 콜백을 호출하여 `<button ></button>`이 출력된다.
+2. 버튼을 누를 때마다 재렌더링이 실행된다. ref 콜백이 다시 계산되지 않아 호출되지도 않는다.
+
+
 
 ## useImperativeHandle
 
