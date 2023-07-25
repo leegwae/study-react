@@ -610,7 +610,7 @@ setNumber(42);
 > - https://react-ko.dev/learn/queueing-a-series-of-state-updates
 > - https://react-ko.dev/reference/react/useState#setstate-caveats
 
-일찍 리렌더링을 촉발하려면 `flushSync`를 사용한다. TODO: https://react-ko.dev/reference/react-dom/flushSync
+일찍 리렌더링을 촉발하려면 [`flushSync`](#flushSync)를 사용한다.
 
 ## Context API
 
@@ -1361,6 +1361,8 @@ const MyInput = forwardRef((props, ref) => {
 
 ## flushSync
 
+TODO: https://react-ko.dev/reference/react-dom/flushSync
+
 ```jsx
 import { flushSync } from 'react-dom';
 
@@ -1372,7 +1374,7 @@ flushSync(() => {
 
 `flushSync`는 전달된 콜백을 즉시 호출하고 내부의 모든 업데이트를 동기적으로 flush한다. 따라서 `flushSync`로 감싼 콜백이 실행된 직후 DOM이 업데이트된다.
 
-### 상태 동기적으로 업데이트하기
+### 상태 동기적으로 DOM에 업데이트하기
 
 > **출처**
 >
@@ -1399,6 +1401,24 @@ function handleAdd() {
 ```
 
 `flushSync`로 감싼 코드가 실행된 직후 React는 DOM을 동기적으로 업데이트하도록 한다. 그래서 `listRef.current.lastChild`는 의도했던 대로 새로 업데이트된 todo를 표시한 DOM 노드를 가리키게 된다.
+
+### 단, React가 상태를 동기적으로 업데이트하는 것은 아니다
+
+```javascript
+function handleAdd() {
+    const newTodo = { id: nextId++, text: text };
+    flushSync(() => {
+        setText('');
+        setTodos([ ...todos, newTodo]);      
+    });
+    console.log(todos.at(-1).text)
+    console.log(listRef.current.lastChild.textContent);
+}
+```
+
+이때 콘솔 결과는 같지 않다. 전자는 상태가 갱신되기 전 `todos`의 마지막 요소를, 후자는 상태가 갱신된 후의 `todos`의 마지막 요소를 가리킨다. React 자체는 상태를 비동기적으로 갱신하여 React는 다음 렌더링의 값에 접근하지 않는다. `flushSync`는 `react-dom`의 API로, DOM의 동기적 갱신을 보장한다. (TODO)
+
+
 
 ***
 
