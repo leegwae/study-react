@@ -95,11 +95,15 @@ export default function TeaGathering() {
 
 ### side effect
 
-애플리케이션은 반드시 side effect를 동반한다. side effect는 렌더링이 완료된 후에 일어나는 변경이다. React에서 side effect는 대개 이벤트 핸들러 실행으로 발생한다. 이벤트 핸들러는 렌더링 중에 실행되는 것이 아니라 렌더링이 완료된 후 이벤트의 발생으로 실행된다. 그러니 이벤트 핸들러는 순수 함수가 아닐 수도 있다.
+애플리케이션은 반드시 side effect를 동반한다. side effect는 렌더링이 완료된 후(커밋까지 완료된 후)에 일어나는 변경이다. React에서 side effect는 두 가지 경우에서 발생할 수 있다.
+
+1. 이벤트 핸들러의 실행으로 side effect가 발생하는 경우. 이벤트 핸들러는 렌더링이 완료된 후 이벤트의 발생으로 실행된다. 따라서 이벤트 핸들러는 순수 함수가 아닐 수도 있다.
+2. 렌더링으로 side effect가 발생하는 경우. 이 경우 side effect를 *(React)Effect*라고 한다. [Effect](#Effect)를 참고한다.
 
 > **출처**
 >
 > - https://react-ko.dev/learn/keeping-components-pure#where-you-_can_-cause-side-effects
+> - https://react-ko.dev/learn/synchronizing-with-effects#what-are-effects-and-how-are-they-different-from-events
 
 ### 왜 순수성인가?
 
@@ -518,21 +522,21 @@ export default function Button() {
 
 ### 단계 2: React가 컴포넌트를 렌더링한다
 
-React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다. 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다.
+React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다. 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다. (즉, 컴포넌트의 state가 변경되면 하위 컴포넌트도 모두 호출된다.)
 
 1. 첫 렌더링에서 React는 루트 컴포넌트를 호출한다. 이 동안 React는 컴포넌트에 대한 DOM 노드를 생성한다.
 2. 리렌더링에서 React는 state 업데이트로 렌더링이 촉발된 컴포넌트를 호출한다. 이 동안 React는 이전 렌더링과 비교하여 변경된 속성을 계산한다. (계산만 하고 어떤 작업도 수행하지 않는다.)
 
 ### 단계 3: React가 DOM에 변경 사항을 커밋한다
 
-React는 컴포넌트를 호출한 후 DOM을 수정한다.
+React는 컴포넌트를 호출한 결과 값을 바탕으로 DOM을 수정한다.
 
 1. 첫 렌더링 이후, React는 첫 렌더링 동안 생성한 DOM 노드를 `appendChild()` DOM API를 사용하여 화면에 표시한다.
 2. 리렌더링 이후, React는 리렌더링 동안 계산된 값과 DOM을 일치하도록 한다. 이때 이전 렌더링과 최신 렌더링 간에 차이가 있는 경우에만 DOM 노드를 변경한다. 
 
 ### 최종적으로 화면에 표시: 브라우저 페인트
 
-브라우저 렌더링(brwoser rendering)이란 렌더링이 완료되고 React가 DOM 업데이트한 이후 브라우저가 화면을 리페인트(repaint)하는 과정을 말한다. 문서에서는 "페인팅(painting)"으로 명시할 것이다.
+브라우저 렌더링(browser rendering)이란 렌더링이 완료되고 React가 DOM 업데이트한 이후 브라우저가 화면을 리페인트(repaint)하는 과정을 말한다. 문서에서는 "페인팅(painting)"으로 명시할 것이다.
 
 ## Batching
 
@@ -668,6 +672,492 @@ function App() {
     );
 }
 ```
+
+
+
+## Effect
+
+Effect는 렌더링으로 발생하는 사이드 이펙트를 의미한다. 예를 들어, 화면에 채팅 컴포넌트를 표시한 후 채팅 서버와 연결하고 싶을 수 있으나 마땅한 이벤트가 없을 수 있다. 이때 Effect를 사용할 수 있다.
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#what-are-effects-and-how-are-they-different-from-events
+
+### 단계 1: Effect 선언하기
+
+`useEffect`로 렌더링이 완료될 때마다 실행될 Effect를 명시할 수 있다. 즉, `useEffect`에 전달된 함수의 실행은 렌더링이 완료될 때까지 지연된다.
+
+```jsx
+import React, { useEffect } from 'react';
+
+function MyComponent() {
+    useEffect(() => {
+        // 컴포넌트의 렌더링이 완료될 때마다 실행된다.
+    });
+    
+    return <div />;
+}
+```
+
+
+
+게임을 예시로 들어보자.
+
+```javascript
+import { useEffect } from 'react';
+
+function App() {
+    return <Game />;
+}
+
+function Game() {
+    useEffect(() => {
+        const server = createConnection();
+        server.connect();
+    });
+    
+    return <div />;
+}
+```
+
+위 예제에서 `<Game>` 컴포넌트의 렌더링이 완료될 때마다 서버에 연결한다.
+
+### 단계 2: Effect 의존성 지정하기
+
+**마운트(mount)**란, 컴포넌트가 처음으로 렌더링되어 화면에 나타나는 것을 말한다.
+
+- 컴포넌트의 첫 렌더링이 완료될 때 한 번만 side effect를 발생시키고 싶다면, 의존성에 빈 배열 `[]`를 전달하면 된다.
+
+```jsx
+import React, { useEffect } from 'react';
+
+function MyComponent() {
+    useEffect(() => {
+        // 컴포넌트가 마운트될 때 한 번만 실행된다.
+    }, []);
+    
+    return <div />;
+}
+```
+
+- 컴포넌트의 첫 렌더링이 완료된 후 한 번, 그리고 state나 props의 변경으로 인한 리렌더링이 완료될 때마다 side effect를 발생시키고 싶다면 의존성 배열에 해당 값들을 전달하면 된다.
+
+```jsx
+import React, { useEffect } from 'react';
+
+function MyComponent({ a }) {
+    useEffect(() => {
+        // 컴포넌트가 마운트될 때 한 번, 그리고
+        // a의 변경으로 리렌더링이 완료될 때마다 실행된다.
+    }, [a]);
+    
+    return <div />;
+}
+```
+
+React는 의존성 배열을 `Object.is`로 비교하고 이전 렌더링과 동일하면 Effect의 재실행을 건너뛴다.
+
+
+
+예를 들어보자. `<App />` 컴포넌트에 인풋을 추가하고, 인풋의 값을 state로 관리해보자.
+
+```jsx
+function App() {
+    const [input, setInput] = setState('');
+    
+    function handleInputChange(e) {
+        setInput(e.target.value);
+    }
+    
+    return (
+        <>
+        	<input value={input} onChange={handleInputChange}/>
+        	<Game />
+        </>
+    );
+}
+```
+
+이때 `<Game />`은 렌더링이 완료될 때마다 서버에 연결을 반복한다. 그러니 사용자가 인풋 값을 변경할 때마다 `<Game />`의 리렌더링이 이루어진다. 하지만 나는 `<Game />` 컴포넌트의 첫 렌더링이 완료될 때에만 서버에 연결하기를 원할 수 있다. 그렇다면 의존성 배열에 `[]`를 전달하면 된다.
+
+```jsx
+import { useEffect } from 'react';
+
+
+function Game() {
+    useEffect(() => {
+        const server = createConnection();
+        server.connect();
+    }, []);
+    
+    return <div />;
+}
+```
+
+### 단계 3: 클린업 추가하기
+
+`useEffect`에 전달한 함수는 의존성 배열의 변경으로 리렌더링이 완료될 때마다 실행된다. 이때, 이 함수가 반환하는 함수는 Effect가 다시 실행되기 전마다, 그리고 컴포넌트가 **언마운트(unmount)될** 때 한 번 실행된다.
+
+```jsx
+import React, { useEffect } from 'react';
+
+function MyComponent() {
+    useEffect(() => {
+        return () => {
+            // Effect가 다시 실행되기 전마다, 그리고
+            // 컴포넌트가 언마운트될 때 한 번 실행된다.
+        }
+    });
+    
+    useEffect(() => {
+        return () => {
+            // 컴포넌트가 언마운트 될 때 한 번 실행된다.
+        }
+    }, []);
+    
+    return <div />;
+}
+```
+
+
+
+예를 들어보자. `<Game />`은 마운트될 때마다 서버와의 연결을 만든다. 이 연결은 끊지 않는 한 계속 쌓이게 된다. 이때 연결을 끊는 함수를 반환하면 된다.
+
+```jsx
+import { useEffect } from 'react';
+
+
+function Game() {
+    useEffect(() => {
+        const server = createConnection();
+        server.connect();
+        
+        return () => server.disconnect();
+    }, []);
+    
+    return <div />;
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#how-to-write-an-effect
+
+### 언제 사용하는가?
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development
+
+#### 이벤트 구독하기
+
+```jsx
+useEffect(() => {
+   function handleClick(e) {
+       console.log('클릭 이벤트 발생');
+   }
+    
+    window.addEventListener('click', handleClick);
+    
+    return () => window.removeEventListener('click', handleClick);
+});
+```
+
+cleanup 함수를 추가하여 클릭 이벤트에 한 번에 한 개의 `handleClick` 이벤트 핸들러만 등록되도록 한다.
+
+#### 데이터 페칭하기
+
+[React에서 데이터 페칭하기](#React에서-데이터-페칭하기)를 참고한다.
+
+### Effect가 아닌 것들
+
+1. 애플리케이션을 초기화할 때: 애플리케이션이 시작될 때 한 번만 실행되어야하는 로직은 컴포넌트 외부에 넣어도 된다.
+
+   ```jsx
+   if (typeof window !== 'undefined') {
+       checkAuthToken();
+       loadDataFromLocalStorage();
+   }
+   
+   function App() { /* 컴포넌트 코드 */ }
+   ```
+
+2. 멱등하지 않은 메서드를 실행하는 것: 가령 HTTP POST 요청을 `useEffect`에서 실행한다면, 컴포넌트가 마운트될 때 해당 요청이 이루어질 것이다. `<Strict Mode>`에서는 렌더링이 두 번 실행되므로 이것이 잘못되었음을 알 수 있다.
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#not-an-effect-initializing-the-application
+
+### 기본 동작 방식
+
+컴포넌트의 props, 지역 변수, 이벤트 핸들러, Effect는 컴포넌트 호출 당시의 state로 계산이 된다.
+
+```jsx
+import React from 'react';
+
+function Game({ mode }) {
+    React.useEffect(() => {
+        const server = createConnection(mode);
+        server.connect();
+        
+        return () => server.disconnect();
+    }, [mode]);
+    
+    return <div>게임 모드: {mode}</div>;
+}
+```
+
+1. 첫 렌더링 때 `mode`가 `'소환사의 협곡'`이었다면 `useEffect`는 다음과 같이 계산된다.
+   ```jsx
+   React.useEffect(() => {
+       const server = createConnection('소환사의 협곡');
+       server.connect();
+   
+       return () => server.disconnect();
+   }, ['소환사의 협곡']);
+   ```
+2. 첫번째 렌더링이 완료되고(컴포넌트가 마운트되고) 첫번째 Effect가 실행된다. `mode`가 `'소환사의 협곡'`인 서버와 연결된다.
+3. 상위 컴포넌트가 리렌더링을 촉발하여 `<Game>` 컴포넌트도 리렌더링된다.
+4. 첫번째 리렌더링 때 `mode`가 `'소환사의 협곡'`이므로 `useEffect`는 다음과 같이 계산된다.
+   ```jsx
+   React.useEffect(() => {
+       const server = createConnection('소환사의 협곡');
+       server.connect();
+   
+       return () => server.disconnect();
+   }, ['소환사의 협곡']);
+   ```
+5. 첫번째 리렌더링이 완료되고 두번째 Effect가 실행되어야 하나, 의존성 배열이 이전 Effect와 동일하므로 건너뛴다.
+6. 상위 컴포넌트가 `setMode('칼바람 나락')`으로 리렌더링을 촉발하여 `<Game>` 컴포넌트도 리렌더링된다.
+7. 두번째 리렌더링 때 `mode`가 `'칼바람 나락'`이므로 `useEffect`는 다음과 같이 계산된다.
+   ```jsx
+   React.useEffect(() => {
+       const server = createConnection('칼바람 나락');
+       server.connect();
+   
+       return () => server.disconnect();
+   }, ['칼바람 나락']);
+   ```
+8. 두번째 리렌더링이 완료되고 세번째 Effect가 실행되기 전, 의존성 배열의 내용이 변경되었으므로 가장 최근에 실행된 Effect의 cleanup 함수가 실행된다. 즉, 첫번째 Effect의 cleanup 함수가 실행되어 `mode`가 `'소환사의 협곡'`인 서버와 연결이 끊어진다.
+   첫번째 Effect의 cleanup 함수가 실행된 후, 세번째 Effect가 실행된다. `mode`가 `'칼바람 나락'`인 서버와 연결된다.
+9. `<Game>` 컴포넌트가 언마운트될 때, 가장 마지막으로 실행된 Effect의 cleanup 함수가 실행된다. 즉, 세번째 Effect의 cleanup 함수가 실행된다. `mode`가 `'칼바람 나락'`인 서버와 연결이 끊어진다.
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#each-render-has-its-own-effects
+
+## React에서 데이터 페칭하기
+
+컴포넌트를 렌더링하기 위해 필요한 데이터를 서버에서 페칭해와야한다고 하자. `useState`와 `useEffect`를 사용해볼 수 있다. 기본적은 로직은 아래와 같다.
+
+1. 컴포넌트의 렌더링이 완료된다. 현재는 `useState`에 전달된 초기값을 화면에 보여준다.
+2. `useEffect`가 실행된다. 데이터를 페칭해오고 해당 데이터로 `setState`를 호출한다.
+3. 컴포넌트의 리렌더링이 완료된다. 페칭해 온 데이터를 화면에 보여준다.
+
+기본적인 구현체는 아래와 같다.
+
+```jsx
+import React from 'react';
+
+function FetchComponent (url){
+    const [data, setData] = React.useState(null);
+    
+    React.useEffect(() => {
+        async function fetchData() {
+            const res = await fetch(url);
+            const newData = await res.json();
+            
+            setData(newData);
+        }
+        
+        fetchData();
+    }, [url]);
+    return <div>JSON.stringify(data)</div>
+}
+```
+
+### 왜 `setup` 함수는 `async`일 수 없는가?
+
+```javascript
+useEffect(async () => {
+    const val = await Promise.resolve(1);
+    console.log(val);
+}, []);
+```
+
+왜 이처럼 `setup` 함수는 `async` 함수로 만들 수 없을까? 다음 제한들을 살펴보자.
+
+1. `async` 함수는 암묵적으로 프로미스 객체를 반환한다.
+2. `setup` 함수는 cleanup 함수를 반환하거나 아무것도 반환하지 않는다.
+
+이에 따르면 `setup` 함수는 `async` 함수일 수 없다. 하지만 `setup` 함수 내에서 비동기 함수를 실행할 수 있으므로, 다음과 같이 비동기 로직은 `async` 함수로 감싼 후 호출해주면 된다.
+
+```jsx
+useEffect(async () => {
+    async function resolve() {
+        const val = await Promise.resolve(1);
+        console.log(val);
+    }
+    
+    resolve();
+}, []);
+```
+
+> 출처
+>
+> - https://www.robinwieruch.de/react-hooks-fetch-data/
+
+### useEffect를 사용했을 때의 문제점: 경쟁 상태 발생
+
+> **경쟁 상태(race condition)**는 공유 자원에 두 개 이상의 프로세스가 접근할 때 그 접근 순서에 따라 결과가 달라지는 상황을 뜻한다. [운영체제 - 프로세스 동기화](https://github.com/leegwae/operating-system/blob/main/Process%20Synchronization.md)
+
+데이터를 페칭하는 컴포넌트가 연달아 리렌더링된다고 하자. 앞 선 요청이 뒤따른 요청보다 응답이 늦어질 수도 있다. 즉, 매번 서로 다른 결과를 표시하는 경쟁 상태가 발생할 수 있다.
+
+[링크의 예시](https://codesandbox.io/s/race-condition-with-useeffect-8dv53q?file=/src/FetchComponent.js)를 살펴보자. 우선 `<App >` 컴포넌트는 사용자가 버튼을 누를 때마다 새로이 요청할 자원의 id를 생성한다. 여기서는 요청 id가 임의의 난수이다.
+
+```jsx
+import React from "react";
+
+export default function App() {
+  const [request, setRequest] = React.useState(0);
+
+  const handleClick = () => {
+    const nextRequest = Math.round(Math.random() * 100);
+    setRequest(nextRequest);
+  };
+
+  return (
+    <div>
+      <div>current request: {request}</div>
+      <button onClick={handleClick}>request next!</button>
+      <FetchComponent request={request} />
+    </div>
+  );
+}
+
+```
+
+`<FetchComponent />`는 `<App />`으로부터 요청 id를 받아 해당 id로 네트워크 요청하고 응답을 받아 표시한다. 여기서는 네트워크 요청이 `setTimeout`으로 resolve를 지연한 임의의 Promise 객체이다. 이 프로미스는 요청 id를 그대로 resolve한다.
+
+```jsx
+import React from 'react';
+
+function FetchComponent({ request }) {
+  const [response, setResponse] = React.useState(0);
+
+  React.useEffect(() => {
+    async function fetch() {
+      const res = await new Promise((resolve) => {
+        const delay = Math.round(Math.random() * 1000 * 10);
+        setTimeout(() => resolve(request), delay);
+      });
+      setResponse(res);
+    }
+
+    fetch();
+  }, [request]);
+
+  return <div id="response">current response: {response}</div>;
+}
+```
+
+### 경쟁 상태 방지하기
+
+cleanup 함수를 활용하여 경쟁 상태를 방지해보자. 여기서는 두 가지 방법을 알아볼 것이다.
+
+1. 데이터가 stale한지 나타내는 플래그 사용하기
+2. `AbortController` API 사용하기
+
+#### 데이터가 stale한지 나타내는 플래그 사용하기
+
+데이터가 stale한지 나타내는 플래그 변수를 선언한 후, cleanup 함수가 실행되면 stale하다고 표시한다. 사용자가 버튼을 연달아 눌러 `<FetchComponent>`가 리렌더링되면 이전 요청이 뒤늦게 응답 와도 `stale === true`이므로 `set` 함수가 실행되지 않을 것이다.
+
+```diff
+import React from 'react';
+
+function FetchComponent({ request }) {
+  const [response, setResponse] = React.useState(0);
+
+  React.useEffect(() => {
++   let stale = false;
+    async function fetch() {
+      const res = await new Promise((resolve) => {
+        const delay = Math.round(Math.random() * 1000 * 10);
+        setTimeout(() => resolve(request), delay);
+      });
+-      setResponse(res);
++      if (!stale) setResponse(res);
+    }
+
+    fetch();
+    
++   return () => { stale = true; }
+  }, [request]);
+
+  return <div id="response">current response: {response}</div>;
+}
+```
+
+#### `AbortController` API 사용하기
+
+`AbortController`를 사용하여 하나 이상의 웹 요청(Web request)을 중단할 수 있다. (그러니 이 방법은 위에서처럼 프로미스로 네트워크 요청을 모킹한 경우에는 쓸 수 없다.) 네트워크 요청하는 함수에 컨트롤러의 `signal`을 전달한 후, cleanup 함수가 실행되면 `abort` 메서드를 호출하여 요청을 중단한다. 사용자가 버튼을 연달아 눌러 `<FetchComponent>`가 리렌더링되면 이전 렌더링의 요청은 중단되어 `set` 함수가 실행되지 않을 것이다.
+
+```diff
+import React from 'react';
+
+function FetchComponent (url){
+    const [data, setData] = React.useState(null);
+    
+    React.useEffect(() => {
++       const controller = new AbortController();
+        async function fetchData() {
++			try {
+-				const res = await fetch(url);
++				const res = await fetch(url, { signal: controller.signal });
+                   const newData = await res.json();
+
+				setData(newData);
++ 			} catch (err) {
++				if (err.name !== 'AbortError') throw err;
++				// 여기서 네트워크 요청을 중단하여 발생한 에러를 처리한다.
++			} catch (err) {
++				// 여기서 그 밖의 에러를 처리한다.
++			}
+        }
+        
+        fetchData();
+        
++		return () => controller.abort();
+    }, [url]);
+    return <div>JSON.stringify(data)</div>
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#fetching-data
+> - https://www.robinwieruch.de/react-hooks-fetch-data/
+> - https://maxrozen.com/race-conditions-fetching-data-react-with-useeffect
+> - https://developer.mozilla.org/en-US/docs/Web/API/AbortController
+
+### useEffect를 사용한 데이터 페칭의 단점
+
+`useEffect`를 사용한 데이터 페칭의 단점은 아래와 같다.
+
+1. Effect를 사용하는 것은 효율적이지 않다. Effect는 클라이언트에서 실행되므로, 클라이언트는 서버로부터 모든 HTML과 JavaScript를 받아와 React 앱을 렌더링한 후에야 데이터도 페칭해야한다는 것을 알 수 있다.
+2. Effect를 사용하면 네트워크 워터폴이 만들어질 수 있다. 상위 컴포넌트를 렌더링하고 데이터를 페칭한 후 하위 컴포넌트에 대해서도 그러는 작업이 재귀적으로 발생한다.
+3. Effect를 사용하면 응답 캐싱, 요청 중복 제거, 네트워크 워터폴 방지(데이터를 미리 로딩하거나 라우트에 데이터 요청을 호이스팅한다)을 직접 구현해야 한다.
+
+### 어떤 대안을 사용할 것인가?
+
+1. 프레임워크(Next.js, Remix 등)를 사용하고 해당 프레임워크에서 제공하는 빌트인 데이터 페칭 메커니즘을 사용한다.
+2. 클라이언트 사이드 캐시를 만들거나 오픈 소스(SWR, React Query, React Router 등)를 사용한다.
+
+> 출처
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#what-are-good-alternatives-to-data-fetching-in-effects
+
+
 
 ## Hooks
 
@@ -1276,7 +1766,9 @@ function MyForm() {
 
 `forwardRef` 렌더 함수로 ref를 전달받은 자식 컴포넌트는 `useImperativeHandle` 훅을 사용하여 부모에게 노출할 ref의 내용을 사용자 정의할 수 있다.
 
-> 출처: https://react-ko.dev/learn/manipulating-the-dom-with-refs#exposing-a-subset-of-the-api-with-an-imperative-handle
+> 출처
+>
+> - https://react-ko.dev/learn/manipulating-the-dom-with-refs#exposing-a-subset-of-the-api-with-an-imperative-handle
 
 ### 기본 작동 방식
 
@@ -1292,7 +1784,9 @@ ref도 두 단계로 나누어보면 다음과 같다. DOM 노드를 참조하�
 
 ref는 렌더링이 완료된 이후 side effect를 발생시키기 위해 사용하는 것이 일반적이다. 즉, 이벤트 핸들러나 Effect에서 접근한다.
 
-> 출처: https://react-ko.dev/learn/manipulating-the-dom-with-refs#when-react-attaches-the-refs
+> 출처
+>
+> - https://react-ko.dev/learn/manipulating-the-dom-with-refs#when-react-attaches-the-refs
 
 ### 조건부 렌더링에서 ref 사용하기
 
@@ -1359,8 +1853,6 @@ export function App() {
 
 1. 첫 렌더링 이후 버튼이 화면에 추가된다. DOM 노드로 ref 콜백을 호출하여 `<button ></button>`이 출력된다.
 2. 버튼을 누를 때마다 재렌더링이 실행된다. ref 콜백이 다시 계산되지 않아 호출되지도 않는다.
-
-
 
 ## useImperativeHandle
 
