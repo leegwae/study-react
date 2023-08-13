@@ -522,7 +522,7 @@ export default function Button() {
 
 ### 단계 2: React가 컴포넌트를 렌더링한다
 
-React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다. 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다. (즉, 컴포넌트의 state가 변경되면 하위 컴포넌트도 모두 호출된다.)
+React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다. 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다. (즉, 컴포넌트의 state가 변경되면 하위 컴포넌트도 모두 리렌더링된다.)
 
 1. 첫 렌더링에서 React는 루트 컴포넌트를 호출한다. 이 동안 React는 컴포넌트에 대한 DOM 노드를 생성한다.
 2. 리렌더링에서 React는 state 업데이트로 렌더링이 촉발된 컴포넌트를 호출한다. 이 동안 React는 이전 렌더링과 비교하여 변경된 속성을 계산한다. (계산만 하고 어떤 작업도 수행하지 않는다.)
@@ -616,7 +616,7 @@ setNumber(42);
 
 일찍 리렌더링을 촉발하려면 [`flushSync`](#flushSync)를 사용한다.
 
-## Context API
+## Context
 
 > **출처**
 >
@@ -724,9 +724,9 @@ function Game() {
 
 ### 단계 2: Effect 의존성 지정하기
 
-**마운트(mount)**란, 컴포넌트가 처음으로 렌더링되어 화면에 나타나는 것을 말한다.
+> **마운트(mount)**란, 컴포넌트가 처음으로 렌더링되어 화면에 나타나는 것을 말한다.
 
-- 컴포넌트의 첫 렌더링이 완료될 때 한 번만 side effect를 발생시키고 싶다면, 의존성에 빈 배열 `[]`를 전달하면 된다.
+- 컴포넌트가 마운트될 때 그 한 번만 side effect를 발생시키고 싶다면, 의존성에 빈 배열 `[]`를 전달하면 된다.
 
 ```jsx
 import React, { useEffect } from 'react';
@@ -740,7 +740,7 @@ function MyComponent() {
 }
 ```
 
-- 컴포넌트의 첫 렌더링이 완료된 후 한 번, 그리고 state나 props의 변경으로 인한 리렌더링이 완료될 때마다 side effect를 발생시키고 싶다면 의존성 배열에 해당 값들을 전달하면 된다.
+- 컴포넌트가 마운트될 때 그 한 번, 그리고 state나 props의 변경으로 인한 리렌더링이 완료될 때마다 side effect를 발생시키고 싶다면 의존성 배열에 해당 값들을 전달하면 된다.
 
 ```jsx
 import React, { useEffect } from 'react';
@@ -762,8 +762,10 @@ React는 의존성 배열을 `Object.is`로 비교하고 이전 렌더링과 동
 예를 들어보자. `<App />` 컴포넌트에 인풋을 추가하고, 인풋의 값을 state로 관리해보자.
 
 ```jsx
+import { useState } from 'react';
+
 function App() {
-    const [input, setInput] = setState('');
+    const [input, setInput] = useState('');
     
     function handleInputChange(e) {
         setInput(e.target.value);
@@ -776,9 +778,18 @@ function App() {
         </>
     );
 }
+
+function Game() {
+    useEffect(() => {
+        const server = createConnection();
+        server.connect();
+    });
+    
+    return <div />;
+}
 ```
 
-이때 `<Game />`은 렌더링이 완료될 때마다 서버에 연결을 반복한다. 그러니 사용자가 인풋 값을 변경할 때마다 `<Game />`의 리렌더링이 이루어진다. 하지만 나는 `<Game />` 컴포넌트의 첫 렌더링이 완료될 때에만 서버에 연결하기를 원할 수 있다. 그렇다면 의존성 배열에 `[]`를 전달하면 된다.
+이때 `<Game />`은 렌더링이 완료될 때마다 서버에 연결을 반복한다. 그러니 사용자가 인풋 값을 변경할 때마다 `<App />`이 리렌더링될 때마다 `<Game />`의 리렌더링도 이루어진다. 하지만 나는 `<Game />` 컴포넌트가 마운트될 때 그 한 번만 서버에 연결하기를 원할 수 있다. 그렇다면 의존성 배열에 `[]`를 전달하면 된다.
 
 ```jsx
 import { useEffect } from 'react';
@@ -871,15 +882,20 @@ cleanup 함수를 추가하여 클릭 이벤트에 한 번에 한 개의 `handle
 
 ### Effect가 아닌 것들
 
-1. 애플리케이션을 초기화할 때: 애플리케이션이 시작될 때 한 번만 실행되어야하는 로직은 컴포넌트 외부에 넣어도 된다.
+1. 애플리케이션을 초기화할 때: 컴포넌트가 마운트될 때 한 번이 아니라, 애플리케이션이 시작될 때 한 번만 실행되어야하는 로직은 컴포넌트 외부에 넣어도 된다.
 
-   ```jsx
-   if (typeof window !== 'undefined') {
-       checkAuthToken();
-       loadDataFromLocalStorage();
+   ```diff
+   +if (typeof window !== 'undefined') {
+   +	checkAuthToken();
+   +	loadDataFromLocalStorage();
    }
    
-   function App() { /* 컴포넌트 코드 */ }
+   function App() {
+   -	useEffect(() => {
+   -		checkAuthToken();
+   -		loadDataFromLocalStorage();
+   -	}, []);
+   }
    ```
 
 2. 멱등하지 않은 메서드를 실행하는 것: 가령 HTTP POST 요청을 `useEffect`에서 실행한다면, 컴포넌트가 마운트될 때 해당 요청이 이루어질 것이다. `<Strict Mode>`에서는 렌더링이 두 번 실행되므로 이것이 잘못되었음을 알 수 있다.
@@ -918,7 +934,8 @@ function Game({ mode }) {
    ```
 2. 첫번째 렌더링이 완료되고(컴포넌트가 마운트되고) 첫번째 Effect가 실행된다. `mode`가 `'소환사의 협곡'`인 서버와 연결된다.
 3. 상위 컴포넌트가 리렌더링을 촉발하여 `<Game>` 컴포넌트도 리렌더링된다.
-4. 첫번째 리렌더링 때 `mode`가 `'소환사의 협곡'`이므로 `useEffect`는 다음과 같이 계산된다.
+4. 두번째 렌더링 때 `mode`가 `'소환사의 협곡'`로 바뀌지 않았으므로 `useEffect`는 다음과 같이 계산된다.
+   
    ```jsx
    React.useEffect(() => {
        const server = createConnection('소환사의 협곡');
@@ -927,9 +944,9 @@ function Game({ mode }) {
        return () => server.disconnect();
    }, ['소환사의 협곡']);
    ```
-5. 첫번째 리렌더링이 완료되고 두번째 Effect가 실행되어야 하나, 의존성 배열이 이전 Effect와 동일하므로 건너뛴다.
+5. 두번째 렌더링이 완료되고 두번째 Effect가 실행되어야 하나, 의존성 배열이 이전 Effect와 동일하므로 건너뛴다.
 6. 상위 컴포넌트가 `setMode('칼바람 나락')`으로 리렌더링을 촉발하여 `<Game>` 컴포넌트도 리렌더링된다.
-7. 두번째 리렌더링 때 `mode`가 `'칼바람 나락'`이므로 `useEffect`는 다음과 같이 계산된다.
+7. 세번째 렌더링 때 `mode`가 `'칼바람 나락'`이므로 `useEffect`는 다음과 같이 계산된다.
    ```jsx
    React.useEffect(() => {
        const server = createConnection('칼바람 나락');
@@ -938,7 +955,7 @@ function Game({ mode }) {
        return () => server.disconnect();
    }, ['칼바람 나락']);
    ```
-8. 두번째 리렌더링이 완료되고 세번째 Effect가 실행되기 전, 의존성 배열의 내용이 변경되었으므로 가장 최근에 실행된 Effect의 cleanup 함수가 실행된다. 즉, 첫번째 Effect의 cleanup 함수가 실행되어 `mode`가 `'소환사의 협곡'`인 서버와 연결이 끊어진다.
+8. 세번째 렌더링이 완료되고 세번째 Effect가 실행되기 전, 의존성 배열의 내용이 변경되었으므로 가장 최근에 실행된 Effect의 cleanup 함수가 실행된다. 즉, 첫번째 Effect의 cleanup 함수가 실행되어 `mode`가 `'소환사의 협곡'`인 서버와 연결이 끊어진다.
    첫번째 Effect의 cleanup 함수가 실행된 후, 세번째 Effect가 실행된다. `mode`가 `'칼바람 나락'`인 서버와 연결된다.
 9. `<Game>` 컴포넌트가 언마운트될 때, 가장 마지막으로 실행된 Effect의 cleanup 함수가 실행된다. 즉, 세번째 Effect의 cleanup 함수가 실행된다. `mode`가 `'칼바람 나락'`인 서버와 연결이 끊어진다.
 
@@ -1106,30 +1123,31 @@ function FetchComponent({ request }) {
 import React from 'react';
 
 function FetchComponent (url){
-    const [data, setData] = React.useState(null);
+	const [data, setData] = React.useState(null);
     
-    React.useEffect(() => {
-+       const controller = new AbortController();
-        async function fetchData() {
+	React.useEffect(() => {
++		const controller = new AbortController();
+		async function fetchData() {
 +			try {
 -				const res = await fetch(url);
 +				const res = await fetch(url, { signal: controller.signal });
-                   const newData = await res.json();
+				const newData = await res.json();
 
 				setData(newData);
-+ 			} catch (err) {
++			} catch (err) {
 +				if (err.name !== 'AbortError') throw err;
 +				// 여기서 네트워크 요청을 중단하여 발생한 에러를 처리한다.
 +			} catch (err) {
 +				// 여기서 그 밖의 에러를 처리한다.
 +			}
-        }
+		}
         
-        fetchData();
+		fetchData();
         
 +		return () => controller.abort();
-    }, [url]);
-    return <div>JSON.stringify(data)</div>
+	}, [url]);
+
+	return <div>JSON.stringify(data)</div>
 }
 ```
 
@@ -1156,6 +1174,210 @@ function FetchComponent (url){
 > 출처
 >
 > - https://react-ko.dev/learn/synchronizing-with-effects#what-are-good-alternatives-to-data-fetching-in-effects
+
+## Effect는 필요하지 않을 수도 있다
+
+Effect가 필요하지 않은 경우에는 대개 아래와 같다.
+
+1. Effect에서 렌더링을 위해 데이터 변경하기
+2. Effect로 사용자 이벤트 처리하기
+
+> - https://react-ko.dev/learn/you-might-not-need-an-effect#how-to-remove-unnecessary-effects
+
+### 1. state의 변경으로 또다른 state 변경하기
+
+```diff
+import React, { useState, useEffect } from 'react';
+
+function Form() {
+  const [firstName, setFirstName] = useState('Luxanna');
+  const [lastName, setLastName] = useState('Crownguard');
+  
+  // 💥: 불필요한 state와 Effect!
+-  const [fullName, setFullName] = useState('');
+-	useEffect(() => {
+-		setFullName(`${firstName}${lastName}`);
+-	}, [firstName, lastName]);
+  
+  // ✨: 렌더링 중에 계산하기
++  const fullName = `${firstName}${lastName}`;
+  
+  // ...
+}
+```
+
+`fullName`을 state로 두고 `firstName`이나 `lastName`이 변경되면 다음과 같은 일이 발생한다.
+
+1. `firstName`이나 `lastName`이 변경되어 `<Form>`의 리렌더링이 촉발된다.
+2. `<Form>`이 변경된 state로 렌더링된다.
+3. 렌더링이 완료된 후, 렌더링 동안 계산된 Effect가 실행된다. 이때 `fullName`이 변경되어 또다시 `<Form>`의 리렌더링이 촉발된다.
+4. `<Form>`이 변경된 state로 렌더링된다.
+5. 렌더링이 완료된 후, 의존성 배열이 변경되지 않았으므로 Effect의 실행은 건너뛴다.
+
+`fullName`을 렌더링 중에 계산하면 다음과 같은 일이 발생한다.
+
+1. `firstName`이나 `lastName`이 변경되어 `<Form>`의 리렌더링이 촉발된다.
+2. `<Form>`이 변경된 state로 렌더링된다.
+
+불필요한 리렌더링이 발생하지 않는 것이다.
+
+> 출처
+>
+> - https://react-ko.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state
+
+이때 계산이 비싸다면, `useMemo`를 사용하여 메모이제이션할 수 있다.
+
+```diff
+import { useMemo, useState } from 'react';
+
+function TodoList({ todos, filter }) {
+  // 💥: `getFilteredTodos`가 비싸다면
+-	const filteredTodos = getFilteredTodos(todos, filter);
+  
+  // ✨: `useMemo`로 메모이제이션한다
++	const filteredTodos = useMemo(() => getFilteredTodos(todos, filter), [todos, filter]);
+  
+  // ...
+}
+```
+
+>출처
+>
+>- https://react-ko.dev/learn/you-might-not-need-an-effect#caching-expensive-calculations
+
+### 2. prop의 변경으로 모든 state 변경하기
+
+다음 [예시](https://codesandbox.io/s/react-resetting-state-on-prop-change-in-an-effect-yc9jg4?file=/src/App.js)를 살펴보자. `<App>` 컴포넌트는 사용자가 버튼을 클릭할 때마다 사용자가 입력한 사용자 이름의 `<Profile>` 컴포넌트를 보여준다.
+
+```jsx
+import React from "react";
+
+function App() {
+  const [userId, setUserId] = React.useState("");
+  const inputRef = React.useRef(null);
+
+  function handleClick() {
+    setUserId(inputRef.current.value);
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} />
+      <button onClick={handleClick}>프로필 이동하기</button>
+      <hr />
+      <Profile userId={userId} />
+    </div>
+  );
+}
+```
+
+`<Profile>`에서 사용자는 인풋에 값을 입력하여 댓글을 달 수 있다. `<Profile>`은 `comment` state를 사용하여 인풋의 값을 관리하고 있다.
+
+```jsx
+function Profile({ userId }) {
+  const [comment, setComment] = React.useState("");
+
+  return (
+    <div>
+      <div>{userId}님의 프로필</div>
+      댓글 달기:
+      <input value={comment} onChange={(e) => setComment(e.target.value)} />
+    </div>
+  );
+}
+```
+
+React의 UI 트리에서 동일한 위치에 있는 동일한 컴포넌트는 리렌더링되어도 state를 유지한다. [참고](#동일한-위치에-있는-동일한-컴포넌트는-state를 유지한다) 이에 따르면 `userId`가 변경되어 `<App>`과 그 하위 컴포넌트인 `<Profile>`의 리렌더링이 발생해도 `<Profile>`의 state인 `comment`는 초기화되지 않는다. 그래서 `useEffect`를 사용하여 `userId`가 변경되면 `setComment`를 호출하고자 할 수 있다.
+
+```diff
+function Profile({ userId }) {
+  const [comment, setComment] = React.useState("");
+	
++	React.useEffect(() => {
++		setComment("");
++ }, [userId]);
+  
+  // ...
+}
+```
+
+그러나 이 경우 `userId`의 변경으로 `<Profile>`에 총 두 번의 리렌더링을 발생시킨다. 이 경우 컴포넌트에 고유한 `key`를 부여하여 컴포넌트를 식별할 수 있도록 하면 된다.
+
+```diff
+import React from "react";
+
+function App() {
+  //...
+  return (
+  	<div>
+  		{/* ... */}
+-			<Profile userId={userId} />
++			<Profile userId={userId} key={userId} />
+		</div>
+  );
+}
+
+function Profile({ userId }) {
+  const [comment, setComment] = React.useState("");
+	
+-	React.useEffect(() => {
+-		setComment("");
+- }, [userId]);
+  
+  // ...
+}
+```
+
+### 3. props의 변경으로 일부 state 변경하기
+
+props가 바뀌었을 때 모든 state를 재설정하려면, `key`를 사용하여 컴포넌트에 고유성을 부여하면 된다. 그러나 props가 바뀌었을 때 일부 state만 변경하고 싶다면 다음과 같이 Effect를 사용할 수 있다. `item`이 바뀔 때 `bar` 상태만 초기화하고 싶다고 하자.
+
+```jsx
+function MyComponent({ item  }) {
+  const [foo, setFoo] = useState(null);
+  const [bar, setBar] = useState(null);
+  
+  useEffect(() => {
+    setBar(null);
+  }, [item])
+
+  // 생략...
+}
+```
+
+그러나 Effect에서 `set` 함수를 호출하면 불필요한 렌더링이 발생하게 된다. 차라리 다음과 같이 렌더링 도중에 `set` 함수를 호출하는 것이 좋다.
+
+```diff
+function MyComponent({ item  }) {
+  const [foo, setFoo] = useState(null);
+  const [bar, setBar] = useState(null);
+  
+-  useEffect(() => {
+-   setBar(null);
+- }, [item]);
+
++	const [prevItem, setPrevItem] = useState(item);
++ if (prevItem !== item) {
++		setPrevItem(item);
++		setBar(null);
++	}
+
+  // 생략...
+}
+```
+
+[이전 렌더링의 데이터를 참조하기](#이전-렌더링의-데이터를-참조하기)를 참고한다.
+
+> **출처**
+>
+> - https://react-ko.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+> - https://react-ko.dev/reference/react/useState#storing-information-from-previous-renders
+
+### 4. 외부 스토어 구독하기
+
+TODO: https://react-ko.dev/learn/you-might-not-need-an-effect#subscribing-to-an-external-store
+
+useSyncExternalStore
 
 
 
@@ -1349,9 +1571,31 @@ const handleClick = () => {
 > - https://react-ko.dev/reference/react/useState#adding-state-to-a-component
 > - https://react-ko.dev/reference/react/useState#ive-updated-the-state-but-logging-gives-me-the-old-value
 
-### 이전 렌더링의 state를 렌더링 중에 참조하기
+### 이전 렌더링의 데이터를 참조하기
 
-TODO: https://react-ko.dev/reference/react/useState#storing-information-from-previous-renders
+prop가 달라진 경우 일부 state만 재설정하고 싶을 수 있다. 이때는 렌더링 도중 `set` 함수를 호출한다.
+
+```jsx
+function MyComponent({ item  }) {
+  const [foo, setFoo] = useState(null);
+  const [bar, setBar] = useState(null);
+   
+  const [prevItem, setPrevItem] = useState(item);
+  
+  if (prevItem !== item) {
+  	setPrevItem(item);
+  	setBar(null);
+  }
+
+  // 생략...
+}
+```
+
+React는 컴포넌트가 렌더링 도중에 자신의 `set` 함수를 호출하면(다른 컴포넌트의 `set` 함수를 호출하면 에러를 발생시킨다) `return`문으로 종료된 직후 반환된 JSX를 버리고 즉시 컴포넌트를 리렌더링한다. 자식들은 기존의 렌더링은 건너뛰고 최종 렌더링만 진행하게 된다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useState#storing-information-from-previous-renders
 
 ### 함수를 state의 값으로 저장하기
 
