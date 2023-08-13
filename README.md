@@ -755,7 +755,7 @@ function MyComponent({ a }) {
 }
 ```
 
-React는 의존성 배열을 `Object.is`로 비교하고 이전 렌더링과 동일하면 Effect의 재실행을 건너뛴다.
+React는 의존성 배열을 `Object.is`로 비교하고 이전 렌더링과 동일하면 Effect의 재실행을 건너뛴다. 한편, 
 
 
 
@@ -807,7 +807,7 @@ function Game() {
 
 ### 단계 3: 클린업 추가하기
 
-`useEffect`에 전달한 함수는 의존성 배열의 변경으로 리렌더링이 완료될 때마다 실행된다. 이때, 이 함수가 반환하는 함수는 Effect가 다시 실행되기 전마다, 그리고 컴포넌트가 **언마운트(unmount)될** 때 한 번 실행된다.
+`useEffect`에 전달한 함수에서 반환하는 함수는 **클린업 함수(cleanup function)**이다. 클린업 함수를 전달하지 않는다면 빈 클린업 함수를 반환한 것처럼 동작한다. 클린업 함수는 Effect가 다시 실행되기 전마다, 그리고 컴포넌트가 **언마운트(unmount)될** 때 한 번 실행된다.
 
 ```jsx
 import React, { useEffect } from 'react';
@@ -856,10 +856,6 @@ function Game() {
 
 ### 언제 사용하는가?
 
-> 출처
->
-> - https://react-ko.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development
-
 #### 이벤트 구독하기
 
 ```jsx
@@ -879,6 +875,10 @@ cleanup 함수를 추가하여 클릭 이벤트에 한 번에 한 개의 `handle
 #### 데이터 페칭하기
 
 [React에서 데이터 페칭하기](#React에서-데이터-페칭하기)를 참고한다.
+
+> **출처**
+>
+> - https://react-ko.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development
 
 ### Effect가 아닌 것들
 
@@ -1154,6 +1154,7 @@ function FetchComponent (url){
 > 출처
 >
 > - https://react-ko.dev/learn/synchronizing-with-effects#fetching-data
+> - https://react-ko.dev/reference/react/useEffect#fetching-data-with-effects
 > - https://www.robinwieruch.de/react-hooks-fetch-data/
 > - https://maxrozen.com/race-conditions-fetching-data-react-with-useeffect
 > - https://developer.mozilla.org/en-US/docs/Web/API/AbortController
@@ -1464,6 +1465,32 @@ const [index, setIndex] = useState(0);
 > **출처**
 >
 > - https://react-ko.dev/learn/state-a-components-memory#anatomy-of-usestate
+
+이에 따르면, props를 초기값으로 전달받은 state는 해당 props가 변한다고 그 값으로 다시 초기화되는게 아니다.
+
+```jsx
+function MyComponent({ state }) {
+  const [prevState, _] = useState(state);
+  
+  return <div>prev state is {prevState}</div>;
+}
+
+function App() {
+  const [state, setState] = useState(0);
+  
+  return (
+    <>
+    	<button onClick={() => setState(state => state + 1)}>
+      	current count is {state}
+    	</button>
+    </>
+  );
+}
+```
+
+버튼을 눌러 `state`는 업데이트되지만 `prevState`는 업데이트되지 않는다. 상태의 업데이트는 오로지 해당 상태의 `set` 함수를 호출하여 가능하다. 초기값은 첫 렌더링에서만 사용되고, 리렌더링부터는 버려진다.
+
+
 
 ### React는 어떤 state를 반환해야하는지 어떻게 알 수 있는가?
 
@@ -2148,6 +2175,276 @@ const MyInput = forwardRef((props, ref) => {
 > - https://react-ko.dev/reference/react/useImperativeHandle
 
 ***
+
+## useEffect
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useEffect
+
+`useState`는 컴포넌트를 외부 시스템과 동기화하는 React Hook이다.
+
+```jsx
+React.useEffect(setup, dependecies?);
+```
+
+### 매개변수 
+
+1. `setup`: Effect 로직이 포함된 함수이다. `setup` 함수는 반드시 함수를 반환하며, 이 함수를 **클린업 함수(cleanup function)**로 취급한다. 아무것도 반환하지 않으면 암묵적으로 빈 클린업 함수를 반환한다.
+   기본적으로 렌더링이 완료될 때마다 `setup` 함수를 실행하며, 리렌더링이 완료되어 다음 Effect가 실행되기 전 클린업 함수를 실행한다.
+2. `dependecies`(optional): `setup`에 포함된 모든 반응형 값(relative value; 컴포넌트 내부의 props, state, 지역 변수)을 나열한 배열이다. React는 매 렌더링마다 `Object.is`로 가장 최근에 실행되었던 Effect의 의존성 배열과 비교한 후 의존성에 변경이 생겼다면 가장 최근에 실행되었던 Effect의 클린업 함수를 실행하고 현재 계산된 Effect를 실행한다.
+
+### 반환값
+
+`undefined`를 반환한다.
+
+### 의존성을 선택할 수 없다
+
+Effect의 의존성은 개발자가 아니라 React가 정한다. Effect가 사용하는 모든 **반응형 값(reactive value; 컴포넌트의 props, state, 지역 변수)**는 의존성 목록에 명시되어야한다. `eslint-plugin-react-hooks` ESLint 룰을 통해 오류를 알 수 있다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useEffect#specifying-reactive-dependencies
+> - https://react-ko.dev/learn/lifecycle-of-reactive-effects#react-verifies-that-you-specified-every-reactive-value-as-a-dependency
+
+### React는 무엇을 기준으로 의존성 배열이 변경되었다고 판단하는가?
+
+React는 `Object.is`로 현재 계산된 Effect와 가장 최근에 실행되었던 Effect의 의존성 배열을 비교하여 같다고 판단하면 Effect를 실행하지 않는다.
+
+```jsx
+if (Object.is(prevDeps, curDeps)) {
+  effect();
+}
+```
+
+### 기본 작동 방식
+
+React는 필요할 때마다 `setup` 함수와 `cleanup` 함수를 실행한다. 기본적으로 `setup` 함수는 렌더링이 완료될 때마다 실행되며, `cleanup` 함수는 `setup` 함수가 실행되기 전마다 실행된다. `dependecies` 배열을 어떻게 명시하느냐에 따라 실행이 달라진다.
+
+> 이전 `cleanup` 함수는 가장 최근에 실행된 `setup` 함수가 반환하는 `cleanup` 함수이다. 만약 첫번째 렌더링과 두번째 렌더링에서 계산된 Effect의 의존성 배열이 같아 두번째 렌더링의 `setup` 함수가 실행되지 않았다면, 세번째 렌더링에서 의존성 배열이 달랐을 때 세번째 렌더링의 `setup` 함수를 실행하기 전 첫번째 렌더링의 `setup` 함수를 실행한다.
+
+#### 1. 아무것도 전달하지 않은 경우
+
+```jsx
+useEffect(() => {
+  /* setup */
+  return () => { /* clenaup */ }
+});
+```
+
+1. 컴포넌트가 마운트되면 `setup` 함수를 실행한다.
+2. 컴포넌트가 리렌더링될 때마다 이전 `cleanup` 함수를 실행한 후 현재 `setup` 함수를 실행한다.
+3. 컴포넌트가 언마운트되면 `cleanup` 함수를 실행한다.
+
+#### 2. 빈 배열을 전달한 경우
+
+```jsx
+useEffect(() => {
+  /* setup */
+  return () => { /* clenaup */ }
+}, []);
+```
+
+1. 컴포넌트가 마운트되면 `setup` 함수를 실행한다.
+2. 컴포넌트가 언마운트되면 `cleanup` 함수를 실행한다.
+
+#### 3. 의존성 배열을 전달한 경우
+
+```jsx
+useEffect(() => {
+  /* setup */
+  return () => { /* clenaup */ }
+}, [a, b]);
+```
+
+1. 컴포넌트가 마운트되면 `setup` 함수를 실행한다.
+2. 컴포넌트가 리렌더링될 때마다 의존성 배열을 `Object.is`로 이전 의존성 배열과 비교한다. 변경되었다면 이전 `cleanup` 함수를 실행한 후 현재 `setup` 함수를 실행한다.
+3. 컴포넌트가 언마운트된다. `cleanup` 함수를 실행한다.
+
+### React Effect는 브라우저가 화면을 그린 후 실행된다
+
+1. React는 상호작용으로 발생한 Effect는 브라우저가 업데이트된 화면을 그리기 전에 실행한다. 그런데 어떤 경우, React가 Effect 내부의 state 업데이트를 처리하기 전 브라우저가 리페인트를 할 수도 있다.
+2. React는 상호작용으로 발생하지 않은 Effect는 브라우저가 업데이트된 화면을 그린 후 실행한다.
+
+브라우저가 화면을 그리기 전 Effect를 실행하고 싶다면 `useLayoutEffect`를 사용해야한다.
+
+TODO: https://react-ko.dev/reference/react/useLayoutEffect
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useEffect#caveats
+> - https://react-ko.dev/reference/react/useEffect#my-effect-does-something-visual-and-i-see-a-flicker-before-it-runs
+
+### 불필요한 의존성 제거하기
+
+#### 이전 state를 기반으로 state 업데이트하기
+
+```jsx
+function ChatRoom() {
+  const [messages, setMessages] = useState([]);
+  
+  useEffect(() => {
+    const connection = createConnection();
+    connection.connect();
+    connection.on('message', (newMessage) => {
+      setMessage([...messages, newMessage]);
+    });
+    
+    return () => connection.disconnect();
+  }, [messages]);
+  
+  // 생략...
+}
+```
+
+이때 `messages`는 반응형 값이므로 Effect의 의존성 배열에 명시해야한다. 그렇다면 새로 매시지가 올 때마다 서버와 연결하고 연결을 끊는 로직이 반복될 것이다.
+
+```diff
+function ChatRoom() {
+  const [messages, setMessages] = useState([]);
+  
+  useEffect(() => {
+    const connection = createConnection();
+    connection.connect();
+    connection.on('message', (newMessage) => {
+-    	setMessage([...messages, newMessage]);
++    	setMessage(messages => [...messages, newMessage]);
+    });
+    
+    return () => connection.disconnect();
+-	}, [messages]);
++	}, []);
+
+  // 생략...
+}
+```
+
+그렇다면 `set` 함수에 업데이터 함수를 전달하여 반응형 값에 의존하지 않을 수 있다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useEffect#updating-state-based-on-previous-state-from-an-effect
+> - https://react-ko.dev/learn/removing-effect-dependencies#are-you-reading-some-state-to-calculate-the-next-state
+
+#### props로 전달받은 객체 의존성 없애기
+
+```jsx
+function ChatRoom({ options }) {
+  const [messages, setMessages] = useState([]);
+  
+  useEffect(() => {
+    const connection = createConnection(options);
+    connection.connect();
+  }, [options]);
+  
+  // 생략...
+}
+```
+
+`option`은 객체이므로 내용이 같아도 `Object.is`에서 변경되었다고 판단할 수 있다. 이 경우 Effect 밖에서 객체로부터 원시값을 읽어 문제를 회피해볼 수 있다.
+
+```diff
+function ChatRoom({ options }) {
+  const [messages, setMessages] = useState([]);
+
++	const { url, roomId } = options;
+  useEffect(() => {
+-		const connection = createConnection(options);
++		const connection = createConnection({ url, rommId });
+		connection.connect();
+-	}, [options]);
++	}, [url, roomId]);
+
+  
+  // 생략...
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/learn/removing-effect-dependencies#read-primitive-values-from-objects
+
+#### 렌더링 도중에 생성한 객체 의존성 없애기
+
+```jsx
+function ChatRoom() {
+  const [messages, setMessages] = useState([]);
+  
+  const options = createOptions();
+  useEffect(() => {
+    const connection = createConnection(options);
+    connection.connect();
+  }, [options]);
+  
+  // 생략...
+}
+```
+
+`options`는 매 렌더링마다 다시 계산되어, Effect도 매 렌더링마다 다시 실행된다. 이 경우 객체를 Effect 내부나, 아니면 아예 컴포넌트 외부로 옮겨 해결할 수 있다.
+
+```diff
+// 컴포넌트 외부로 옮기기
++ const options = createOptions();
+function ChatRoom() {
+  const [messages, setMessages] = useState([]);
+  
+-	const options = createOptions();
+  useEffect(() => {
+    const connection = createConnection(options);
+    connection.connect();
+-	}, [options]);
++	}, []);
+  
+  // 생략...
+}
+```
+
+```diff
+// Effect 내부로 옮기기
+function ChatRoom() {
+  const [messages, setMessages] = useState([]);
+  
+-	const options = createOptions();
+  useEffect(() => {
++		const options = createOptions();
+		const connection = createConnection(options);
+		connection.connect();
+-	}, [options]);
++	}, []);
+  
+  // 생략...
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useEffect#removing-unnecessary-object-dependencies
+> - https://react-ko.dev/learn/removing-effect-dependencies#does-some-reactive-value-change-unintentionally
+
+### 서버와 클라이언트 서로 다른 컨텐츠 표시하기
+
+Effect는 클라이언트에서만 실행되므로, 이를 이용해 서버와 클라이언트를 구분하고 서로 다른 로직을 수행할 수 있다.
+
+```jsx
+function MyComponent() {
+  const [didMount, setDidMount] = useState(false);
+
+  useEffect(() => {
+    setDidMount(true);
+  }, []);
+
+  if (didMount) {
+    // ... return client-only JSX ...
+  }  else {
+    // ... return initial JSX ...
+  }
+}
+```
+
+> 출처
+>
+> - (TODO) https://react-ko.dev/reference/react/useEffect#displaying-different-content-on-the-server-and-the-client
+> - https://react-ko.dev/reference/react/useEffect#caveats
 
 ## flushSync
 
