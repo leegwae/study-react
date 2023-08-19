@@ -2191,7 +2191,8 @@ React.useEffect(setup, dependecies?);
 ### 매개변수 
 
 1. `setup`: Effect 로직이 포함된 함수이다. `setup` 함수는 반드시 함수를 반환하며, 이 함수를 **클린업 함수(cleanup function)**로 취급한다. 아무것도 반환하지 않으면 암묵적으로 빈 클린업 함수를 반환한다.
-   기본적으로 렌더링이 완료될 때마다 `setup` 함수를 실행하며, 리렌더링이 완료되어 다음 Effect가 실행되기 전 클린업 함수를 실행한다.
+   
+   기본적으로 `setup` 함수는 컴포넌트가 마운트될 때, 그리고 리렌더링이 완료될 때마다 실행된다. 클린업 함수는 컴포넌트가 언마운트될 때, 그리고 `setup` 함수가 실행되기 전마다 실행된다.
 2. `dependecies`(optional): `setup`에 포함된 모든 반응형 값(relative value; 컴포넌트 내부의 props, state, 지역 변수)을 나열한 배열이다. React는 매 렌더링마다 `Object.is`로 가장 최근에 실행되었던 Effect의 의존성 배열과 비교한 후 의존성에 변경이 생겼다면 가장 최근에 실행되었던 Effect의 클린업 함수를 실행하고 현재 계산된 Effect를 실행한다.
 
 ### 반환값
@@ -2266,9 +2267,7 @@ useEffect(() => {
 1. React는 상호작용으로 발생한 Effect는 브라우저가 업데이트된 화면을 그리기 전에 실행한다. 그런데 어떤 경우, React가 Effect 내부의 state 업데이트를 처리하기 전 브라우저가 리페인트를 할 수도 있다.
 2. React는 상호작용으로 발생하지 않은 Effect는 브라우저가 업데이트된 화면을 그린 후 실행한다.
 
-브라우저가 화면을 그리기 전 Effect를 실행하고 싶다면 `useLayoutEffect`를 사용해야한다.
-
-TODO: https://react-ko.dev/reference/react/useLayoutEffect
+브라우저가 화면을 그리기 전 Effect를 실행하고 싶다면 `useLayoutEffect`를 사용해야한다. [useLayoutEffect](#useLayoutEffect)를 참고한다.
 
 > **출처**
 >
@@ -2445,6 +2444,71 @@ function MyComponent() {
 >
 > - (TODO) https://react-ko.dev/reference/react/useEffect#displaying-different-content-on-the-server-and-the-client
 > - https://react-ko.dev/reference/react/useEffect#caveats
+
+## useLayoutEffect
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useLayoutEffect
+
+`useLayoutEffect`는 브라우저가 화면을 리페인트하기 전에 실행되는 버전의 `useEffect`이다. 렌더링에 레이아웃 정보를 사용하는 것을 그 목적으로 한다.
+
+```jsx
+React.useLayoutEffect(setup, dependencies?);
+```
+
+1. 초기 컨텐츠를 렌더링한다.
+2. 이 렌더링 결과를 **브라우저가 화면에 리페인트하기 전에** 레이아웃을 측정한다.
+3. 레이아웃 정보를 사용하여 최종 컨텐츠를 렌더링된다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useLayoutEffect#im-getting-an-error-uselayouteffect-does-nothing-on-the-server
+
+### 매개변수
+
+1. `setup`: Effect 로직이 포함된 함수이다. `setup` 함수는 반드시 함수를 반환하며, 이 함수를 **클린업 함수(cleanup function)**로 취급한다. 아무것도 반환하지 않으면 암묵적으로 빈 클린업 함수를 반환한다.
+
+   기본적으로 `setup` 함수는 컴포넌트가 마운트되기 전, 그리고 리렌더링이 완료되기 전마다 실행된다. 클린업 함수는 컴포넌트가 언마운트되기 전, 그리고 `setupt` 함수를 실행하기 전마다 실행된다.
+
+2. `dependecies`(optional): `setup`에 포함된 모든 반응형 값(relative value; 컴포넌트 내부의 props, state, 지역 변수)을 나열한 배열이다. React는 매 렌더링마다 `Object.is`로 가장 최근에 실행되었던 Effect의 의존성 배열과 비교한 후 의존성에 변경이 생겼다면 가장 최근에 실행되었던 Effect의 클린업 함수를 실행하고 현재 계산된 Effect를 실행한다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useLayoutEffect#parameters
+
+### 반환값
+
+`undefined`를 반환한다.
+
+### LayoutEffect는 클라이언트에서만 실행된다
+
+서버 렌더링 중에는 실행되지 않는다. 서버에는 레이아웃 정보가 없기 때문이다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useLayoutEffect#im-getting-an-error-uselayouteffect-does-nothing-on-the-server
+
+### LayoutEffect는 브라우저의 리페인트를 블로킹한다
+
+React는 브라우저가 화면을 리페인트하기 전 `useLayoutEffect` 내부의 코드와 여기서 예약된 모든 state 업데이트가 처리되는 것을 보장한다.
+
+즉, 화면에 나타나기 전 레이아웃 정보를 사용해서 무언가를 해야한다면 LayoutEffect를 사용한다. 예를 들어 툴팁을 렌더링한 후, 툴팁의 높이를 계산하여 다시 위치를 정해야한다면 이때 `set` 함수를 LayoutEffect에서 호출하고 사용자가 리렌더링을 눈치채지 못하도록 한다.
+
+```jsx
+const [tooltipHeight, setTootipHeight] = useState(0);	// 컴포넌트 마운트, 첫번째 렌더링
+
+useLayoutEffect(() => {
+  const { height } = ref.current.getBoundingClientRect();
+  setTooltipHeight(height);	// 두번째 렌더링(리렌더링), layoutEffect에서 사용되므로 브라우저 리페인트를 막아 첫번째 렌더링이 화면에 그려지는 걸 막는다. 최종적으로 사용자에게 보여주는 것은 리렌더링의 결과이다.
+}, []);
+```
+
+성능이 저하될 수 있으므로 가능하면 피하도록 한다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useLayoutEffect#uselayouteffect-blocks-the-browser-from-repainting
 
 ## flushSync
 
