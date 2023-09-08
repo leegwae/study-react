@@ -2510,6 +2510,174 @@ useLayoutEffect(() => {
 >
 > - https://react-ko.dev/reference/react/useLayoutEffect#uselayouteffect-blocks-the-browser-from-repainting
 
+## useMemo
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useMemo
+
+`useMemo`는 리렌더링 사이의 결과를 캐싱하는 React 훅이다.
+
+```javascript
+const cachedValue = React.useMemo(calcuateValue, dependencies);
+```
+
+### 매개변수
+
+1. `calcuateValue`: 캐시할 값을 반환하는 함수(calculation function)이다. 순수 함수이며 인자를 받지 않는다. 초기 렌더링 중에 호출하여 값을 저장하며, 리렌더링에서는 의존성의 변경이 있으면 호출하여 값을 저장한다.
+2. `dependencies`: `calcuateValue`에 포함된 모든 반응형 값(컴포넌트 내부의 props, state, 지역 변수)을 나열한 배열이다. React는 매 렌더링마다 `Object.is`로 현재 의존성 배열과 이전 의존성 배열을 비교한 후, 변경이 생겼다고 판단되면 `calcuateValue`를 호출하고 새로 계산한 값을 저장한다.
+
+### 반환값
+
+1. 첫번째 렌더링 중의 값은 `calcuateValue`를 호출한 반환값이다.
+2. 리렌더링 중의 값은 의존성이 변경되지 않았다면 마지막으로 저장된 값을 반환하고 변경되었다면 `calcuateValue`를 다시 호출한 반환값이다.
+
+### 컴포넌트의 리렌더링 건너뛰기
+
+기본적으로 컴포넌트가 리렌더링되면, 해당 컴포넌트의 모든 자식들도 재귀적으로 리렌더링된다. `memo`를 사용하면 컴포넌트의 모든 prop이 이전 렌더링과 같은 경우 리렌더링을 건너뛸 수 있다.
+
+```jsx
+import React from "react";
+
+export const List = React.memo(function List({ items }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.key}>{item.content}</li>
+      ))}
+    </ul>
+  );
+});
+```
+
+TODO: https://react-ko.dev/reference/react/memo
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useMemo#skipping-re-rendering-of-components
+> - https://react-ko.dev/reference/react/useMemo#should-you-add-usememo-everywhere
+
+### JSX 노드를 메모화하기
+
+JSX 노드를 `useMemo`로 감쌀 수도 있다.
+
+```jsx
+export function TodoList({ theme, todos }) {
+  const filtered = useMemo(() => filterTodos(todos), [todos]);
+  const children = useMemo(() => <List items={filtered} />, [filtered]);
+  
+  return <div className={theme}>{children}</div>;
+}
+```
+
+React는 기본적으로 컴포넌트를 리렌더링하면 자식 컴포넌트도 재귀적으로 리렌더링한다. 그러나 이젠 렌더링과 **동일한 JSX 노드**를 발견하면 컴포넌트를 리렌더링하지 않는다. `useMemo`로 감싼 JSX 노드는 의존성이 변경되지 않는 한 항상 **동일한 객체**를 반환한다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useMemo#memoizing-individual-jsx-nodes
+
+### 의존성에 객체를 넣을 때 주의하라
+
+```jsx
+function Dropdown({ items }) {
+  const options = { tag: "세탁기" };
+
+  // 💥: 매 렌더링마다 options 객체가 생성되므로 계산 함수도 다시 실행된다.
+  const visibleItems = useMemo(
+    () => searchItems(items, options),
+    [items, options]
+  );
+
+  // 생략
+}
+
+```
+
+컴포넌트 내부 객체가 의존성에 포함될 경우, 컴포넌트가 렌더링될 때마다 객체도 새로 생성되어 의존성에 변경이 생긴다.
+
+```diff
+function Dropdown({ items, text }) {
+  // 😊: options 객체가 메모화되어 text 변경시에만 변경된다.
+-	const options = { tag: "세탁기", text };
++	const options = useMemo(() => { tag: "세탁기" }, [text]);
+
+  const visibleItems = useMemo(
+    () => searchItems(items, options),
+    [items, options]
+  );
+
+  // 생략
+}
+
+```
+
+이 경우 `options` 객체 자체를 메모화할 수 있다. `visibleItems`는 의도한 대로 동작할 것이다.
+
+```diff
+function Dropdown({ items, text }) {
+-	const options = useMemo(() => { tag: "세탁기" }, [text]);
+
+  const visibleItems = useMemo(
+    () => {
++    	const options = { tag: "세탁기", text };
++   	return searchItems(items, options);
+    },
+    [items, text]
+  );
+
+  // 생략
+}
+
+```
+
+가장 좋은 방법은 `options`를 계산 함수로 이동하는 것이다. `visibleItems`는 객체 `options` 대신 원시 값 `text`에 의존하게 된다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useMemo#memoizing-a-dependency-of-another-hook
+
+###  함수 메모화하기
+
+함수 역시 값이므로, `useMemo`는 함수를 반환할 수 있다.
+
+```jsx
+export function Page({ productId }) {
+  const handleSubmit = useMemo(
+    () => (formData) => {
+      post(`product/${productId}`, formData);
+    },
+    [productId]
+  );
+
+  // 생략
+}
+
+```
+
+shortcut으로 `useCallback`을 사용할 수 있다.
+
+```jsx
+export function Page({ productId }) {
+  const handleSubmit = useCallback(
+    (formData) => {
+      post(`product/${productId}`, formData);
+    },
+    [productId]
+  );
+
+  // 생략
+}
+
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useMemo#memoizing-a-function
+
+TODO: https://react-ko.dev/reference/react/useCallback
+
+***
+
 ## flushSync
 
 TODO: https://react-ko.dev/reference/react-dom/flushSync
