@@ -2654,7 +2654,7 @@ export function Page({ productId }) {
 
 ```
 
-shortcut으로 `useCallback`을 사용할 수 있다.
+shortcut으로 `useCallback`을 사용할 수 있다. [useCallback](#useCallback)을 참고한다.
 
 ```jsx
 export function Page({ productId }) {
@@ -2674,7 +2674,88 @@ export function Page({ productId }) {
 >
 > - https://react-ko.dev/reference/react/useMemo#memoizing-a-function
 
-TODO: https://react-ko.dev/reference/react/useCallback
+***
+
+## useCallback
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useCallback
+
+`useCallback`은 리렌더링 사이에 함수 정의를 캐싱하는 React 훅이다.
+
+```jsx
+const cachedFn = React.useCallback(fn, dependecies);
+```
+
+### 매개변수
+
+- `fn`: 캐시하려는 함수 값이다. 초기 렌더링 중에는 해당 함수를 반환한다. 리렌더링에서는 의존성의 변경이 있다면 렌더링 중에 전달된 함수를 반환하고, 의존성의 변경이 없다면 이전 렌더링의 함수를 반환한다.
+- `dependencies`: `fn` 내에서 참조된 모든 반응형 값(컴포넌트 내부의 props, state, 지역 변수)을 나열한 배열이다. React는 매 렌더링마다 `Object.is`로 현재 의존성 배열과 이전 의존성 배열을 비교한 후, 변경이 생겼다고 판단하면 새로 계산한 함수를 저장한다.
+
+### 반환값
+
+1. 첫번째 렌더링에서는 `fn` 함수를 반환한다.
+2. 리렌더링에서는 의존성이 변경되지 않았다면 마지막 렌더링에서 저장된 `fn` 함수를 반환하고 변경되었다면 렌더링 중에 전달한 `fn` 함수를 반환한다.
+
+### `useMemo`와의 비교
+
+- `useMemo`는 호출한 함수의 결과를 캐시한다. `useCallback`은 함수 자체를 캐시한다.
+- 내부적으로 거의 동일한 듯하다. (TODO)
+
+```jsx
+function useCallback(fn, dependencies) {
+  return useMemo(() => fn, dependencies);
+}
+```
+
+### 메모된 콜백에서 state 업데이트하기
+
+`useCallback` 내부에서 사용되는 반응형 값은 의존성 배열에 명시되어야한다. 즉, 다음과 같이 `set` 함수를 호출한다면 의존성 배열에 state가 명시되어야한다.
+
+```jsx
+import { useState, useCallback } from 'react';
+
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  const handleAddTodos = useCallback(todo => {
+    setTodos([...todos, todo]);
+  }, [todo]);
+  
+  // ...
+}
+```
+
+이러한 경우 `set` 함수에 업데이터 함수를 전달하여 의존성을 제거할 수 있다.
+
+```diff
+import { useState, useCallback } from 'react';
+
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  const handleAddTodos = useCallback(todo => {
+-		setTodos([...todos, todo]);
++		setTodos(todos => [...todos, todo]);
+-	}, [todo]);
++	}, []);
+  
+  // ...
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useCallback#updating-state-from-a-memoized-callback
+
+### 커스텀 훅 최적화하기
+
+커스텀 훅이 반환하는 함수는 모두 `useCallback`으로 감싸는 것이 좋다. 훅을 사용하는 쪽에서 코드를 최적화할 수 있기 때문이다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useCallback
 
 ***
 
