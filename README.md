@@ -2757,7 +2757,252 @@ function TodoList() {
 >
 > - https://react-ko.dev/reference/react/useCallback
 
-***
+## useTransition
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition
+
+`useTransition`은 UI를 블로킹하지 않고 state를 업데이트하는 React 훅이다.
+
+```jsx
+const [isPending, startTransition] = React.useTransition();
+```
+
+### 반환값
+
+두 개의 값을 담은 배열을 반환한다.
+
+- `isPending` 변수: pending 상태의 트랜지션이 있다면 `true`, 없다면 `false`이다.
+- `startTransition` 함수: state 업데이트를 트랜지션으로 표시하는 함수이다.
+
+### `startTransition` 함수
+
+```javascript
+startTransition(scope);
+```
+
+- `scope` 함수: 하나 이상의 `set` 함수를 호출하여 state를 업데이트하는 함수이다. **동기 함수**이며 매개변수를 가지지 않는다.
+
+React는 `startTransition` 함수 호출 시 매개변수로 전달된 `scope` 함수를 즉시 실행한다. `scope` 함수 호출 중에 동기적으로 스케줄된 state 업데이트를 트랜지션으로 표시한다. timeout과 같이 비동기적으로 스케줄된 state 업데이트는 트랜지션으로 표시하지 않는다. 트랜지션은 논블로킹이며 원치 않은 로딩 indicator를 표시하지 않을 것이다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#starttransition
+
+### 트랜지션으로 표시한 state 업데이트의 특징
+
+트랜지션으로 표시한 state 업데이트는 첫번째, UI를 논블로킹하지 않으며 두번째, 다른 state 업데이트에 의해 중단된다.
+
+```jsx
+import React, { useState } from 'react';
+
+function TabContainer() {
+  const [tab, setTab] = useState('recent');
+  
+  function selectTab(nextTab) {
+    setTab(nextTab);
+  }
+  
+  return (
+  	<>
+    	<button onClick={() => selectTab('recent')}>recent</button>
+    	<button onClick={() => selectTab('popular')}>popular</button>
+    	{tab === 'recent' && <RecentTab />}
+    	{tab === 'popular' && <PopularTab />}
+    </>
+  );
+}
+```
+
+예를 들어, `PopularTab`을 렌더링할 때 최소 `n`초가 걸린다고 하자. 이때 `popluar` 버튼을 누른다면 `PopluarTab`이 렌더링되기 전까지 UI가 멈추고 사용자 인터렉션에 반응하지 않는다. 하지만 `startTransition`으로 `set` 함수를 트랜지션으로 표시해보자.
+
+```diff
+-	import React, { useState } from 'react';
++	import React, { useTransition, useState } from 'react';
+
+function TabContainer() {
++	const [isPending, startTransition] = useTransition();
+  const [tab, setTab] = useState('recent');
+  
+  function selectTab(nextTab) {
++		startTransition(() => {
+			setTab(nextTab);
++		})
+  }
+  
+	// 생략...
+}
+```
+
+state 업데이트는 트랜지션으로 표시되어 UI가 멈추지 않는다. 이때 다른 탭 버튼을 누르면 기존의 state 업데이트는 취소된다. 예를 들어, `popluar` 버튼을 누르고 바로 `recent` 버튼을 누른다고 하자.
+
+1. 사용자가 `popluar` 버튼을 누른다. React는 트랜지션 내에서 `setTab('popluar')`를 처리하고 `TabContainer`를 리렌더링한다.
+2. `TabContainer`를 리렌더링하는 도중 사용자가 `recent` 버튼을 누른다.
+3. React는 트랜지션 내에서 `setTab('recent')`를 처리하고 `TabContainer` 컴포넌트를 리렌더링한다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#examples
+
+### 트랜지션 중에 pending 상태 보여주기
+
+```jsx
+import React, { useTransition } from "react";
+
+function TabButton({ children, onClick }) {
+  const [isPending, startTransition] = useTransition();
+
+  if (isPending) return <b className="pending">{children}</b>;
+  return (
+    <button
+      onClick={() =>
+        startTransition(() => {
+          onClick();
+        })
+      }
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+`useTransition`이 반환하는 boolean 변수를 사용하면 트랜지션이 진행 중임을 표시할 수 있다. 또한 원치 않은 경우 `Suspense` fallback을 보여주지 않을 수도 있다. 예를 들어 `PopluarTab`이 Suspense-enabled 데이터 소스를 사용하고, `TabContainer`가 `Suspense`로 감싸져있어도 fallback이 표시되지 않을 것이다.
+
+```jsx
+import React, { useState } from "react";
+
+function TabContainer() {
+  const [tab, setTab] = useState("recent");
+
+  function selectTab(nextTab) {
+    setTab(nextTab);
+  }
+
+  return (
+    <Suspense fallback={"loading..."}>
+      <TabButton onClick={() => selectTab("recent")}>recent</TabButton>
+      <TabButton onClick={() => selectTab("popular")}>popular</TabButton>
+      {tab === "recent" && <RecentTab />}
+      {tab === "popular" && <PopularTab />}
+    </Suspense>
+  );
+}
+```
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#displaying-a-pending-visual-state-during-the-transition
+> - https://react-ko.dev/reference/react/useTransition#preventing-unwanted-loading-indicators
+
+### Suspense와 Transition 함께 사용하기
+
+TODO: https://react-ko.dev/reference/react/Suspense#preventing-already-revealed-content-from-hiding
+
+### 트랜지션 업데이트는 텍스트 입력에 사용할 수 없다
+
+```jsx
+const [text, setText] = useState('');
+
+function handleChange(e) {
+  stratTransition(() => {
+    setText(e.target.value);
+  });
+}
+
+return <input value={text} onChange={handleChange} />
+```
+
+트랜지션은 논블로킹이나 input 업데이트는 동기적으로 이루어져야하기 때문이다. 두 가지 해결 방법이 있다.
+
+1. input의 state와 트랜지션으로 업데이트할 state를 각각 선언한다. 전자로 input을 제어하고, 후자로 렌더링 로직을 처리한다.
+2. input의 state와 `useDeferredValue`로 지연된 값을 사용한다. TODO: https://react-ko.dev/reference/react/useDeferredValue
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#updating-an-input-in-a-transition-doesnt-work
+
+### 비동기적으로 스케줄된 state 업데이트는 트랜지션으로 표시하지 않는다
+
+`scope` 함수는 동기 함수여야하며, `scope` 함수 호출 중에 비동기적으로 스케줄된 state 업데이트는 트랜지션으로 표시하지 않는다.
+
+#### `scope`가 동기 함수인 경우
+
+예를 들어, `scope` 호출 중의 timeout으로 스케줄된 state 업데이트는 트랜지션으로 표시되지 않는다.
+
+```js
+startTransition(() => {
+  setTimeout(() => {
+    // 😣: startTransition 호출 *이후에* state를 설정한다
+    setPage('/recent');
+  }, 1000);
+});
+```
+
+이와 같은 경우, `startTransition` 자체를 timeout으로 스케줄하여 해결할 수 있다.
+
+```js
+setTimeout(() => {
+  startTransition(() => {
+    // 😊: startTransition 호출 *중에* state를 설정한다
+    setPage('/recent');
+  });
+}, 1000);
+```
+
+#### `scope`가 비동기 함수인 경우
+
+`scope` 함수가 비동기 함수이면 `scope` 호출 중에 비동기적으로 스케줄된 state 업데이트는 트랜지션으로 표시하지 않는다.
+
+```js
+startTransition(async () => {
+  await myAsyncFunction();
+  // 😣: startTransition 호출 *이후에* state를 설정한다
+  setPage('/recent');
+});
+```
+
+이와 같은 경우, `scope` 함수 내부에서 비동기 로직을 꺼내어 `startTransition` 이전에 실행해야한다.
+
+```js
+await myAsyncFunction();
+startTransition(() => {
+  // 😊: startTransition 호출 *중에* state를 설정한다
+  setPage('/recent');
+});
+```
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#react-doesnt-treat-my-state-update-as-a-transition
+
+### 컴포넌트 외부에서 트랜지션 시작하기
+
+`useTransition`은 훅이므로 컴포넌트 내부 최상단에서 사용할 수 있다. 따라서 컴포넌트 내부에서 트랜지션을 시작하려면 `startTransition` 메서드를 사용한다.
+
+TODO: https://react-ko.dev/reference/react/startTransition
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#i-want-to-call-usetransition-from-outside-a-component
+
+#### `scope` 함수는 지연되지 않는다
+
+```js
+console.log(1);
+startTransition(() => {
+  console.log(2);
+  setPage('/recent');
+});
+console.log(3);
+```
+
+`set` 함수는 비동기적으로 작동하나, 트랜지션으로 표시되면 즉시 실행된다. 따라서 `1, 2, 3`을 출력한다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/useTransition#the-function-i-pass-to-starttransition-executes-immediately
 
 ## flushSync
 
