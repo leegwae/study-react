@@ -3287,6 +3287,182 @@ createRoot(document.getElementById('rootB'), {
 >
 > - https://react-ko.dev/reference/react/useId#generating-ids-for-several-related-elements
 
+## useSyncExternalStore
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useSyncExternalStore
+
+`useSyncExternalStore`는 외부 스토어를 구독할 수 있는 React 훅이다
+
+```jsx
+const snapshot = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?);
+```
+
+### 매개변수
+
+- `subscribe`: 스토어를 구독하는 함수이다. `callback` 함수를 인자로 받고 `unsubscribe` 함수를 반환한다. `callback` 함수는 스토어가 변경되면 호출되어야하며(이를 통해 컴포넌트가 리렌더링된다), `unsubscribe` 함수는 구독을 해제하는 함수여야한다. React는 새로운 `subscribe` 함수가 전달될 때마다 `subscribe`를 호출하므로, 컴포넌트 외부로 이동하거나 `useCallback`을 사용하여 메모이제이션한다.
+- `getSnapshot`: 컴포넌트가 필요로 하는 스토어의 데이터의 스냅샷을 반환하는 함수이다. React는 Object.is로 `getSnapshot`의 반환값이 달라졌는지 비교하여 리렌더링한다. 따라서 함수가 호출될 때마다 항상 다른 값을 반환하면 컴포넌트가 렌더링될 때마다 다음 렌더링을 촉발하여 무한 루프에 빠지므로, 스토어가 변경되었을 때에만 이전 렌더링과 다른 값을 반환하도록 한다.
+- `getServerSnapshot`(optional): 스토어에 있는 데이터의 초기 스냅샷을 반환하는 함수이다. 서버에서 HTML을 생성할 때와 여기서 렌더링된 컨텐츠가 클라이언트에서 hydrate할 때만 실행된다. 서버 스냅샷은 클라이언트와 서버 간에 동일해야하고, 서버에서 직렬화하여 클라이언트에게 전달한다. 이 함수를 전달하지 않으면 서버 렌더링 중 오류가 발생한다.
+
+`subscribe`는 React가 전달한 `callback`이 스토어에 변경이 생길 때마다 실행되도록 구현해야한다. 그래야 앞으로 스토어에 변경이 생길 때마다 `callback`이 실행되어 React에게 스토어 데이터에 변경이 생겼음을 릴 수 있다. React는 `callback`이 실행되면  `getSnapshot`을 호출하여 이전 값과 비교하여 달라졌다면 컴포넌트를 리렌더링한다.
+
+### 반환값
+
+렌더링 중에 사용할 수 있는 스토어의 현재 스냅샷을 반환한다.
+
+### 외부 스토어 구독하기
+
+React는 React 외부 저장소에서 데이터를 읽어야하는 경우가 있다. React는 React 외부의 값이 변경되는지 알 수 없기 때문에 이때는 `useSyncExternalStore` 훅을 사용해야한다. 두 가지 경우가 있다.
+
+1. React 외부에서 state를 보관하는 서드 파티 상태 관리 라이브러리
+2. 변경 가능한 값을 노출하는 브라우저 API와 그 변경 사항을 구독하는 이벤트
+
+#### 서드 파티 상태 관리 라이브러리와 동기화하기
+
+```jsx
+let nextId = 0;
+const todos = [];
+let listeners = [];
+
+const todoStore = {
+  addTodo() {
+    todos = [...todos, { id: nextId++, content: `#${nextId}` }];
+    emitChange();
+  },
+  subscribe(listener) {
+    listeners = [...listeners, listener];
+
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  },
+  getSnapshot() {
+    return todos;
+  },
+};
+
+function emitChange() {
+  listeners.forEach((listener) => {
+    listener();
+  });
+}
+
+function MyApp() {
+  const todos = useSyncExternalStore(
+    todoStore.subscribe,
+    todoStore.getSnapshot
+  );
+
+  return (
+    <>
+      <button onClick={() => todoStore.addTodo()}>todo 추가</button>
+      <ul>
+        {todos.map((todo) => (
+          <li id={todo.id}>{todo.content}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useSyncExternalStore#subscribing-to-an-external-store
+
+#### 브라우저 API 구독하기
+
+브라우저는 `navigator.onLine` 속성으로 네트워크 연결이 활성화되어 있는지 표시한다. React가 알지 못하는 사이에 변경될 수 있으므로 `useSyncExternalStore`로 값을 읽어야한다.
+
+```jsx
+function getSnapshot() {
+  retrn navigator.onLine;
+}
+
+function subscribe(callback) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
+function App() {
+  const isOnline = useSyncExternalStore(subscribe, getSnapshot);
+  
+  // ... 생략
+}
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useSyncExternalStore#subscribing-to-a-browser-api
+
+#### 사용자 정의 훅으로 추출하기
+
+```jsx
+export function useIsOnline() {
+  const isOnline = useSyncExternalStore(subscribe, getSnapshot);
+  
+  return isOnline;
+}
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useSyncExternalStore#extracting-the-logic-to-a-custom-hook
+
+### 서버 렌더링 지원하기
+
+서버 렌더링 중엔 다음과 같은 문제가 생길 수 있다.
+
+1. 서드파티 데이터 스토어에 연결할 때 서버와 클라이언트 사이에서 데이터를 일치시켜야한다.
+2. 브라우저 전용 API에 연결할 때 서버 환경에는 해당 API가 존재하지 않아 작동하지 않는다.
+
+이 경우 서버 렌더링 중 적절한 값을 반환하는 `getServerSnapshot`을 제공할 수 있다.
+
+```diff
+export function useIsOnline() {
+	const isOnline = useIsOnline(
+		subscribe,
+		getSnapshot,
++		getServerSnapshot
+	);
+  return isOnline;
+}
+
+// 서버가 생성한 HTML에서는 언제나 true이다.
++function getServerSnapshot() {
++		return true;
++}
+```
+
+적절히 제공할 수 있는 초기값이 없다면 컴포넌트가 클라이언트에서만 렌더링되도록 강제하라.
+
+```jsx
+<Suspense fallback={<h2>loading...</h2>}>
+	<OnlyClient />
+</Suspense>
+
+function OnlyClient() {
+  if (type window === 'undefined') {
+    throw new Error('<OnlyClient /> should only redner on the client.');
+  }
+}
+```
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useSyncExternalStore#adding-support-for-server-rendering
+> - https://react-ko.dev/reference/react/Suspense#providing-a-fallback-for-server-errors-and-server-only-content
+
+### Redux는 어떻게 변경 사항을 React에게 알리는 걸까?
+
+TODO
+
 ***
 
 ## flushSync
