@@ -3183,11 +3183,113 @@ export const useDebouncedValue = <T>(value: T, delay = 500) => {
 
 따라서 목적에 따라 사용하는 것이 옳다.
 
+## useId
 
+`useId`는 접근성 속성에 전달할 수 있는 고유 ID를 생성하는 React 훅이다.
+
+```jsx
+const id = React.useId();
+```
+
+### 반환값
+
+특정 컴포넌트 내에서 특정 `useId`와 연관한 고유 ID 문자열을 반환한다.
+
+### 목록에서 키를 생성할 때 사용하지 말아야한다
+
+키는 데이터에서 생성되어야한다.
+
+### 접근성 속성에 대한 고유 ID 생성하기
+
+```jsx
+import { useId } from 'react';
+
+function PasswordField() {
+  const passwordHintId = useId();
+  
+  return (
+  	<>
+    	<input type="password" aria-describedby={passwordHintId}/>
+    	<p id={passwordHintId}>비밀번호는 최소 10문자 이상이어야해요</p>
+    </>
+  )
+}
+```
+
+React에서 `id`는 고유해야하므로 접근성을 위해 고유한 ID를 생성할 수 있다.
+
+```jsx
+function MyApp() {
+  const id = useId();
+  
+  return (
+    <form>
+      <label htmlFor={id + '-password'}>First Name:</label>
+      <input id={id + '-password'} type="text" />
+      <hr />
+      <label htmlFor={id + '-confirm'}>Last Name:</label>
+      <input id={id + '-confirm'} type="text" />
+    </form>
+  );
+}
+```
+
+관련한 요소라면 접두사용으로 사용할 수도 있다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useId#generating-unique-ids-for-accessibility-attributes
+> - https://react-ko.dev/reference/react/useId#generating-ids-for-several-related-elements
+
+#### htmlFor과 aria-labelledby/aria-describedby의 차이는 뭘까?
+
+TODO
+
+### 왜 임의의 전역 변수를 사용하는 것보다 나을까?
+
+전역 변수 `id++`를 사용할 수도 있는데, 왜 `useId`를 사용해야할까?
+
+React는 서버 렌더링 중에 컴포넌트가 HTML 출력을 생성한다. 이후 클라이언트에서 hydration이 생성된 HTML에 이벤트 핸들러를 첨부한다. 한편 hydration이 작동하려면 클라이언트의 출력과 서버의 HTML이 일치해야한다.
+
+클라이언트 컴포넌트가 hydration되는 순서가 서버 HTML이 생성된 순서와 일치하지 않을 수 있으므로, 카운터를 사용하면 클라이언트의 출력과 서버의 HTML이 일치하는지 보장하기 어렵다.
+
+그러나 `useId`는 훅을 호출한 컴포넌트의 *부모 경로(parent path)*로부터 생성되므로 클라이언트와 서버의 트리가 동일하면 부모 경로는 렌더링 순서에 상관없이 일치할 것이다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useId#why-is-useid-better-than-an-incrementing-counter
+
+### React 루트별로 접두사 공유하기
+
+`createRoot`나 `hydrateRoot`에서 `identifierPrefix` 옵션에 접두사를 전달하면 해당 루트 내의 컴포넌트에서 호출된 `useId`는 접두사로 시작하는 고유 ID를 생성한다.
+
+```jsx
+import { createRoot } from 'react-dom/client';
+
+function App() {
+  const id = useId();
+  
+  // 생략....
+}
+
+createRoot(document.getElementById('rootA'), {
+  identifierPrefix: 'app-A-'
+}).render(<App />);
+
+createRoot(document.getElementById('rootB'), {
+  identifierPrefix: 'app-B-'
+}).render(<App />);
+```
+
+두 애플리케이션은 같은 페이지 내에서 렌더링되어도 ID는 충돌하지 않는다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useId#generating-ids-for-several-related-elements
 
 ***
 
-### flushSync
+## flushSync
 
 TODO: https://react-ko.dev/reference/react-dom/flushSync
 
