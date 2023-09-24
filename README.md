@@ -2917,7 +2917,7 @@ return <input value={text} onChange={handleChange} />
 트랜지션은 논블로킹이나 input 업데이트는 동기적으로 이루어져야하기 때문이다. 두 가지 해결 방법이 있다.
 
 1. input의 state와 트랜지션으로 업데이트할 state를 각각 선언한다. 전자로 input을 제어하고, 후자로 렌더링 로직을 처리한다.
-2. input의 state와 `useDeferredValue`로 지연된 값을 사용한다. TODO: https://react-ko.dev/reference/react/useDeferredValue
+2. input의 state와 `useDeferredValue`로 지연된 값을 사용한다. [참고](#useDeferredValue)
 
 > 출처
 >
@@ -3004,7 +3004,190 @@ console.log(3);
 >
 > - https://react-ko.dev/reference/react/useTransition#the-function-i-pass-to-starttransition-executes-immediately
 
-## flushSync
+## useDeferredValue
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue
+
+`useDefferedValue`는 지연된 값을 사용할 수 있는 React 훅이다.
+
+```js
+const defferedValue = React.useDeferredValue(value);
+```
+
+### 매개변수 `value`
+
+지연시키려는 값이다. 어느 타입의 값이든 될 수 있다. 원시값 혹은 컴포넌트 외부에서 생성된 객체를 전달해야 한다(렌더링 중에 생성한 객체를 전달하면 렌더링 할 때마다 값이 달라져 불필요한 백그라운드 리렌더링이 발생할 수 있기 때문이다).
+
+### 반환값
+
+1. 첫번째 렌더링 중의 값은 `value`와 일치한다.
+2. 업데이트 중에는, React는 우선 이전 값으로 리렌더링을 시도한 후, 백그라운드에서 새로운 값으로 리렌더링을 시도한다. (백그라운드 리렌더링를 시도하는 중 새로운 업데이트가 발생하면 새로운 값으로 백그라운드 리렌더링을 처음부터 다시 시도한다.)
+
+### 무엇을 기준으로 업데이트가 발생했다고 판단하는가?
+
+React는 `Object.is`로 현재 렌더링하는 값과 새로운 값을 비교한다.
+
+### fresh 컨텐츠를 로딩하는 동안 stale 컨텐츠를 보여주기
+
+> 컴포넌트는 suspense-enabled 데이터를 사용한다. 즉, 컴포넌트는 해당 데이터를 로딩하는 동안 suspense된다. 이러한 컴포넌트를 `Suspense`로 감싸면 suspense된 동안 제공한 `fallback`을 대체되나 `useDefferedValue`를 사용하면 `fallback` 대신 지연된 값으로 렌더링된 컴포넌트를 보여줄 수 있다.
+
+`TodoList` 컴포넌트가 Suspense-enabled 데이터를 사용한다. 즉, 해당 데이터를 로딩하는 동안 `TodoList`는 suspense된다.
+
+```jsx
+import { useState, useDefferedValue } from 'react';
+
+function Page() {
+  const [query, setQuery] = useState('');
+  const defferedQuery = useDefferedValue(query);
+
+  return (
+    <>
+      <input value={query} />
+      <Suspense fallback={<h2>loading...</h2>}>
+        <TodoList query={defferedQuery} />
+      </Suspense>
+    </>
+  );
+}
+
+```
+
+1. React는 `''`로 첫 렌더링한다.
+2. 사용자가 `'a'`를 입력한다. React는 우선 이전 값인 `''`로 리렌더링한다.
+3. React는 새로운 값인 `'a'`로 리렌더링을 시도한다. 이때 `TodoList`가 suspense되면 리렌더링을 포기하고 데이터 로딩을 기다린다.
+4. React는 데이터가 로드된 후 새로운 값인 `'a'`로 리렌더링을 다시 시도한다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue#showing-stale-content-while-fresh-content-is-loading
+> - https://react-ko.dev/reference/react/useDeferredValue#how-does-deferring-a-value-work-under-the-hood
+
+### 컨텐츠가 stale한지 표시하기
+
+```diff
+import { useState, useDefferedQuery } from 'react';
+
+function Page() {
+  const [query, setQuery] = useState('');
+  const defferedQuery = useDefferedQuery(query);
++	const stale = query !== defferedQuery;
+  
+  // ...생략
+}
+```
+
+최신 값과 지연된 값을 비교하여 현재 표시되고 있는 컨텐츠가 stale한지 알 수 있다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue#indicating-that-the-content-is-stale
+
+### 백그라운드 리렌더링은 중단될 수 있다
+
+React는 백그라운드 리렌더링 중 또다른 업데이트가 발생하면 기존의 백그라운드 리렌더링을 중단하고 새로운 값으로 백그라운드 리렌더링을 처음부터 다시 시작한다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue#caveats
+
+### UI 일부만 리렌더링 지연하기
+
+`useDefferedValue`를 성능 최적화에 사용할 수 있다.
+
+```jsx
+function Page() {
+  const [filter, setFilter] = useState('');
+  
+  return (
+  	<input value={filter} onChange={e => setFilter(e.target.value)} />
+    <SuperSlowList filter={filter} />
+  );
+}
+```
+
+가령, 사용자가 인풋에 값을 입력할 때마다 `Page`는 리렌더링되며 그 자식 컴포넌트들도 리렌더링된다. 그런데 `SuperSlowList`는 렌더링 속도가 상당히 느리므로 해당 컴포넌트를 리렌더링하는 동안 다른 UI도 블로킹된다. 이 컴포넌트에서 `SuperSlowList`의 리렌더링만 지연해보자.
+
+1. `SuperSlowList`를 `memo`로 감싼다.
+
+```jsx
+const SuperSlowList = React.memo(function SuperSlowList({ filter }) {/* 생략 */})
+```
+
+2. `useDefferedValue`를 사용하여 `SuperSlowList`에 지연된 `filter` 값을 전달한다.
+
+```diff
+import { useState, useDefferedValue } from 'react';
+
+function Page() {
+  const [filter, setFilter] = useState('');
++	const defferedFilter = useDefferedValue(filter);
+  
+  return (
+  	<input value={filter} onChange={e => setFilter(e.target.value)} />
+    <SuperSlowList filter={defferedFilter} />
+  );
+}
+```
+
+`SuperSlowList`의 렌더링 속도는 빨라지지 않으나 `SuperSlowList`의 업데이트의 우선순위를 키 입력 이벤트로 인한 업데이트의 우선순위보다 낮출 수 있다.
+
+#### 왜 `memo`로 감싸야하는가?
+
+`filter`가 변경될 때마다 React는 `Page`는 리렌더링한다. 이 동안 `defferedFilter`는 이전 값을 가지나, 어쨌든 `Page`의 모든 자식 컴포넌트는 리렌더링을 시도한다. 그러므로 이전 props의 값과 렌더링 중인 props의 값을 비교하여 리렌더링을 건너뛸 수 있는 `memo`로 감싸야 `SuperSlowList`는 리렌더링을 건너뛸 수 있다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue#deferring-re-rendering-for-a-part-of-the-ui
+
+### 백그라운드 리렌더링에서 Effect는 언제 발생하는가?
+
+React는 백그라운드 리렌더링을 화면에 커밋한 이후 Effect를 실행한다.
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react/useDeferredValue#caveats
+
+### 값을 지연하는 것과 디바운싱, 스로틀링의 차이는 무엇인가?
+
+부모 컴포넌트가 제어 컴포넌트인 인풋과 목록을 가진다고 하자.
+
+1. 디바운싱(debouncing)이란? 사용자가 타이핑을 멈출 때까지 기다렸다가 목록을 업데이트하는 것이다.
+2. 스로틀링(throttling)이란? 정해진 시간마다(예: 최대 1초에 한 번) 목록을 업데이트한다.
+
+`useDefferedValue`는 React 자체에서 제공하는 훅이고 사용자의 디바이스에 적응하므로 렌더링 최적화에 더 적합하다. `useDefferedValue`에 의해 수행되는 백그라운드 리렌더링(지연된 리렌더링)은 기본적으로 중단 가능하다. 디바운스나 스로틀링은 리렌더링을 캔슬하지 않으며 다만 업데이트를 지연하거나 일정 시간 동안 실행될 수 있는 업데이트의 횟수를 제한하는 것뿐이다.
+
+아래는 디바운싱된 값을 제공하는 훅의 예시이다.
+
+```jsx
+import { useState, useEffect } from 'react';
+
+export const useDebouncedValue = <T>(value: T, delay = 500) => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
+```
+
+디바운스나 스로틀링은 렌더링 중에 발생하지 않는 작업을 최적화하는 데 유용하다. 예를 들어, `useDefferedValue`는 네트워크 요청을 캔슬하지 않지만 디바운싱이나 스로틀링은 네트워크 요청을 더 적게 실행하게 해준다.
+
+따라서 목적에 따라 사용하는 것이 옳다.
+
+
+
+***
+
+### flushSync
 
 TODO: https://react-ko.dev/reference/react-dom/flushSync
 
