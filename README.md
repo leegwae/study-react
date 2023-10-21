@@ -1,4 +1,4 @@
-# study-react
+# mstudy-react
 
 (2023/07/05~)
 
@@ -522,7 +522,7 @@ export default function Button() {
 
 ### 단계 2: React가 컴포넌트를 렌더링한다
 
-React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다. 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다. (즉, 컴포넌트의 state가 변경되면 하위 컴포넌트도 모두 리렌더링된다.)
+<mark>React에서 **렌더링(Rednering)**이란 컴포넌트를 호출하는 것이다.</mark> 렌더링은 재귀적이다. React는 중첩된 컴포넌트가 없고 무엇은 화면에 표시해야하는지 정확히 알기 전까지 컴포넌트를 렌더링하고, 그리고 해당 컴포넌트가 반환하는 컴포넌트를 렌더링하는 과정을 반복한다. (즉, 컴포넌트의 state가 변경되면 반드시 하위 컴포넌트도 모두 리렌더링된다. 하위 컴포넌트의 리렌더링을 막고 싶다면 `React.memo`를 사용한다.)
 
 1. 첫 렌더링에서 React는 루트 컴포넌트를 호출한다. 이 동안 React는 컴포넌트에 대한 DOM 노드를 생성한다.
 2. 리렌더링에서 React는 state 업데이트로 렌더링이 촉발된 컴포넌트를 호출한다. 이 동안 React는 이전 렌더링과 비교하여 변경된 속성을 계산한다. (계산만 하고 어떤 작업도 수행하지 않는다.)
@@ -536,7 +536,7 @@ React는 컴포넌트를 호출한 결과 값을 바탕으로 DOM을 수정한�
 
 ### 최종적으로 화면에 표시: 브라우저 페인트
 
-브라우저 렌더링(browser rendering)이란 렌더링이 완료되고 React가 DOM 업데이트한 이후 브라우저가 화면을 리페인트(repaint)하는 과정을 말한다. 문서에서는 "페인팅(painting)"으로 명시할 것이다.
+브라우저 렌더링(browser rendering)이란 렌더링이 완료되고 React가 DOM 업데이트한 이후 브라우저가 화면을 리페인트(repaint)하는 과정을 말한다. React 렌더링과 구별하기 위해 문서에서는 **"페인팅(painting)"**으로 명시할 것이다.
 
 ## Batching
 
@@ -1376,11 +1376,11 @@ function MyComponent({ item  }) {
 
 ### 4. 외부 스토어 구독하기
 
-TODO: https://react-ko.dev/learn/you-might-not-need-an-effect#subscribing-to-an-external-store
-
-useSyncExternalStore
+[useSyncExternalStore](#useSyncExternalStore)를 참고한다.
 
 
+
+TODO: https://react-ko.dev/learn/sharing-state-between-components#controlled-and-uncontrolled-components
 
 ## Hooks
 
@@ -3536,3 +3536,60 @@ function handleAdd() {
 >
 > - https://react-ko.dev/learn#why_alert_show_twice
 > - https://react-ko.dev/reference/react/StrictMode#fixing-bugs-found-by-double-rendering-in-development
+
+## `<Fragment>(<>)`
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/Fragment
+
+```jsx
+<React.Fragment>
+	<div>첫번째 요소</div>
+	<div>두번째 요소</div>
+</React.Fragment>
+```
+
+`<Fragment>`를 사용하면 wrapper 노드 없이 엘리먼트를 그룹화할 수 있다. `<Fragment>...</Fragment>` 대신 `<>...</>`로 축약할 수 있다.
+
+### Props
+
+- `key`(optional): 축약 표현에는 사용할 수 없다.
+
+### 실제 DOM에 영향을 주지 않는다
+
+`<Fragment>`는 실제 DOM에 영향을 주지 않는다. 즉, wrapper node로 그룹화하지 않은 것과 같다 동일하다. 아래 1번과 2번은 서로 동일하다.
+
+```jsx
+/* 1번 */
+<div>
+  <Fragment>
+    <p>첫번째 요소</p>
+    <p>두번째 요소</p>
+  </Fragment>
+</div>
+
+/* 2번 */
+<div>
+  <p>첫번째 요소</p>
+  <p>두번째 요소</p>
+</div>
+```
+
+### 언제 사용하는가?
+
+wrapper node를 사용하길 원하지 않을 때 사용할 수 있다. 예를 들어 컴포넌트의 props에 여러 개의 엘리먼트를 전달하고 싶을 때 굳이 wrapper node를 추가하지 않아도 된다.
+
+```jsx
+function AlertDialog() {
+  const buttons = (
+    <>
+    	<CancelButton />
+    	<OKButton />
+    </>
+  );
+  
+  return <Dialog buttons={buttons} />;
+}
+```
+
