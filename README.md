@@ -3530,12 +3530,45 @@ function handleAdd() {
 
 ## `<SctirctMode>`
 
+> 출처
+>
+> - https://react-ko.dev/reference/react/StrictMode
+
+```tsx
+<React.StrictMode>
+  <App />
+</React.StrictMode>
+```
+
+`<StirctMode>`는 **개발 환경에서만** 내부 트리에 다음과 같은 전용 동작을 활성화한다.
+
+- 컴포넌트를 두 번 렌더링한다.
+- Effect를 두 번 실행한다.
+- deprecated된 API가 사용되는지 확인한다.
+
+### 컴포넌트를 두 번 렌더링한다
+
+React 컴포넌트는 순수 함수로 동일한 입력에 대해 항상 동일한 출력을 반환해야한다. 따라서 두 번 렌더링하면 동작이 변경되어 버그를 확인할 수 있다. 다음 함수들이 두 번 호출된다.
+
+- 컴포넌트 함수 본문
+- `useState`, `set` 함수, `useMemo`, `useReducer`에 전달한 함수
+- `constructor`, `render`, `sholudComponentUpdate`와 같은 클래스 컴포넌트 메서드 일부
+
 - React는 개발 환경에서 두 번 렌더링된다(초기화 함수와 업데이터 함수를 두 번 실행한다). 컴포넌트가 순수 함수인지 확인하기 위해서이다. 
 
-> **출처**
+> 출처
 >
 > - https://react-ko.dev/learn#why_alert_show_twice
 > - https://react-ko.dev/reference/react/StrictMode#fixing-bugs-found-by-double-rendering-in-development
+
+### deprecated API를 경고한다
+
+다음 API를 사용하는 경우 경고한다.
+
+- `findDOMNode`
+- `UNSAFE_componentWillMount`와 같은 `UNSAFE_` 클래스 라이프 사이클 메서드
+- 레거시 컨텍스트(`childContextTypes`, `contextTypes`, `getChildContext`)
+- 렉ㅓ시 문자열 refs(`this.refs`)
 
 ## `<Fragment>(<>)`
 
