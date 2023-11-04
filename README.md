@@ -1,4 +1,4 @@
-# mstudy-react
+# study-react
 
 (2023/07/05~)
 
@@ -2896,10 +2896,6 @@ function TabContainer() {
 > - https://react-ko.dev/reference/react/useTransition#displaying-a-pending-visual-state-during-the-transition
 > - https://react-ko.dev/reference/react/useTransition#preventing-unwanted-loading-indicators
 
-### Suspense와 Transition 함께 사용하기
-
-TODO: https://react-ko.dev/reference/react/Suspense#preventing-already-revealed-content-from-hiding
-
 ### 트랜지션 업데이트는 텍스트 입력에 사용할 수 없다
 
 ```jsx
@@ -3626,3 +3622,92 @@ function AlertDialog() {
 }
 ```
 
+## `<Suspense>`
+
+```jsx
+<React.Suspense fallback={<Loading />}>
+	<Foo />
+</React.Suspense>
+```
+
+`<Suspense>`는 자식 컴포넌트의 로딩이 완료될 때까지 fallback을 표시할 수 있다. 
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/Suspense
+
+### 매개변수
+
+- `children`: 렌더링하려는 실제 UI이다. 렌더링 중에 `children`이 suspense되면 Suspense 바운더리가 `fallback` 렌더링으로 전환된다. (suspense된 컴포넌트의 가장 가까운 Suspense 바운더리가 활성화된다.)
+- `fallback`: 로딩이 완료되지 않은 실제 UI에 대신 렌더링되는 UI이다. `children`이 suspense되면 `fallback`으로 자동적으로 전환하고 데이터가 준비되면 `children`으로 돌아온다. 렌더링 중에 `fallback`이 suspense되면 가장 가까운 부모 Suspense 바운더리가 활성화된다.
+
+### suspend된 렌더링의 state는 보존하지 않는다
+
+처음 마운트가 가능하기 전 suspense된 렌더링에 대한 state는 보존하지 않는다. 컴포넌트가 로드되면 suspense된 트리를 처음부터 다시 시도한다.
+
+### `startTransition`이나 `useDeferredValue`에 의한 업데이트는 fallback을 표시하지 않는다
+
+Suspense가 트리에 대한 컨텐츠를 표시하고 있다가 다시 suspend되면, `startTransition`이나 `useDeferredValue`에 의한 업데이트가 아닌 경우만 fallback을 표시한다.
+
+- `useDeferredValue`: 지연된 값을 사용하는 컴포넌트가 suspense된 경우, Suspense 바운더리가 활성화되는 대신 업데이트가 반영된 UI가 준비될 때까지 지연된 값(이전 값)을 표시한다.
+- `startTransition`: 트랜지션으로 인한 업데이트에 컴포넌트가 suspense된 경우, Suspense 바운더리가 활성화되는 대신 업데이트가 반영된 UI가 준비될 때까지 기존의 컨텐츠를 보여준다. (Suspense-enabled route는 기본적으로 네비게이션 업데이트를 트랜지션으로 감싸고 있을 것이다.)
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/Suspense#showing-stale-content-while-fresh-content-is-loading
+> - https://react-ko.dev/reference/react/Suspense#preventing-already-revealed-content-from-hiding
+
+### 이미 표시된 컨텐츠를 숨겨야하는 경우 layout Effect를 클린업한다
+
+React는 다시 suspense되어 이미 표시된 컨텐츠를 숨겨하는 경우 layout Effect를 클린업하고 컨텐츠가 준비되면 layout Effect를 다시 실행한다. 컨텐츠가 숨겨져 있는 동안에는 DOM 레이아웃을 측정하는 Effect가 실행되지 않도록 보장한다.
+
+### 내부 최적화(TODO)
+
+> React includes under-the-hood optimizations like *Streaming Server Rendering* and *Selective Hydration* that are integrated with Suspense. Read [an architectural overview](https://github.com/reactwg/react-18/discussions/37) and watch [a technical talk](https://www.youtube.com/watch?v=pj5N-Khihgc) to learn more.
+
+### Suspense-enabled 데이터 소스만 Suspense 컴포넌트를 활성화한다
+
+Suspense-enabled 데이터 소스만 Suspense 컴포넌트를 활성화한다. Suspense-enabled 데이터 소스는 다음을 포함한다.
+
+1. Relay나 Next.js와 같은 Suspense-enabled 프레임워크를 사용한 데이터 fetching
+2. `lazy`를 사용하는 지연-로딩 컴포넌트 코드
+
+Suspense는 Effect나 이벤트 핸들러에서의 fetching을 감지하지 않는다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/Suspense#displaying-a-fallback-while-content-is-loading
+
+### Suspense 바운더리를 중첩하는 경우의 동작
+
+컴포넌트가 suspense되면 가장 가까운 부모 Suspense 바운더리가 활성화된다. 
+
+```jsx
+<Susepnse fallback={<GlobalSpinner />}>
+  <Profile />
+  <Suspense fallback={<FeedSkeleton />}>
+    <Feed />
+  </Suspense>
+</Susepnse>
+```
+
+1. `Profile`이 로딩될 때까지 `GlobalSpinner`가 표시된다.
+2. `Profile`의 로딩이 완료되면 `GlobalSpinner`에서 컨텐츠로 전환된다.
+3. `Feed`가 아직 로딩되지 않은 경우, `Feed` 대신 `FeedSkeleton`가 표시된다.
+4. `Feed`의 로딩이 완료되면 `FeedSkeleton`에서 `Feed`로 전환된다.
+
+> 출처
+>
+> - https://react-ko.dev/reference/react/Suspense#revealing-nested-content-as-it-loads
+
+### 네비게이션에서 Suspense 바운더리를 재설정하기
+
+```jsx
+<Profile key={queryParams.id} />
+```
+
+React는 트랜지션하는 동안에는 이미 표시된 컨텐츠를 숨기지 않으나 다른 매개변수를 가진 라우트로 이동하는 경우 fallback을 표시하는 것이 적절할 수 있다. 이 경우 매개변수를 트랜지션을 사용하는 컴포넌트의 `key` props로 전달하여 서로 다른 컨텐츠임을 알려줄 수 있다. 예를 들어 `@크리톤` 프로필 페이지에서 `@파이돈` 프로필 페이지로 트랜지션을 사용하여 업데이트되는 경우, `@파이돈` 프로필 페이지가 준비될 때까지 `@크리톤` 프로필 페이지를 보여주는 것보다 Spinner와 같은 fallback을 보여주는 것이 적절하다.
+
+### 서버 에러나 server-only 컨텐츠에 fallback 제공하기(TODO)
+
+> https://react-ko.dev/reference/react/Suspense#providing-a-fallback-for-server-errors-and-server-only-content
