@@ -3461,6 +3461,53 @@ TODO
 
 ***
 
+## lazy
+
+> https://react-ko.dev/reference/react/lazy
+
+```jsx
+const MyComponent = lazy(load);
+```
+
+`lazy`를 사용해 최상위 레벨에서 지연된 컴포넌트를 선언할 수 있다. 지연된 컴포넌트는 첫 렌더링까지 컴포넌트 코드의 로딩이 지연된다.
+
+### 매개변수 `load`
+
+- `load`: Promise 혹은 thenable(`then` 메서드를 가진 Promise-유사 객체)를 반환하는 함수이며, resolve된 값은 유효한 React 컴포넌트 타입이어야한다. React는 컴포넌트의 첫 렌더링이 시작될 때까지 `load`를 호출하지 않는다. `load`를 처음 호출하면 resolve될 때까지 기다린 후, resolve된 값을 캐싱하고 렌더링한다(따라서 `load`는 한 번만 호출된다). reject되면 reject된 이유를 `throw`한다.
+
+### 반환값
+
+React 컴포넌트를 반환한다. 이 컴포넌트는 로딩되는 동안은 suspense된다.
+
+### React.lazy와 Router.lazy의 비교
+
+(TODO) https://remix.run/blog/lazy-loading-routes
+
+## memo
+
+> https://react-ko.dev/reference/react/memo
+
+```jsx
+const MemomizedComponent = memo(Component, arePropsEqual?);
+```
+
+`memo`를 사용해 props가 변경되지 않은 경우 컴포넌트의 리렌더링을 건너뛸 수 있다.
+
+### 매개변수
+
+- `Component`: 메모화하려는 React 컴포넌트이다.
+- `arePropsEqual`(optional): 컴포넌트의 이전 props와 새로운 props를 인자로 받는 함수이다. 모든 props가 같으면 `true`를, 그렇지 않다면 `false`를 반환해야한다. React는 기본적으로는 `Object.is`를 사용해 props를 비교한다.
+
+### 반환값
+
+인자로 전달한 컴포넌트와 다른 새로운 컴포넌를 반환한다. 그러나 props가 변경되지 않는 한 리렌더링되지 않는다.
+
+### state와 context가 변경되면 메모화된 컴포넌트는 리렌더링된다
+
+메모화된 컴포넌트는 오로지 props가 변경되지 않는 한 리렌더링될 뿐, 내부 state와 사용한 context가 변경되면 리렌더링된다.
+
+***
+
 ## flushSync
 
 TODO: https://react-ko.dev/reference/react-dom/flushSync
