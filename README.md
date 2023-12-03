@@ -3508,9 +3508,64 @@ const MemomizedComponent = memo(Component, arePropsEqual?);
 
 ***
 
+## createPortal
+
+> 참고
+>
+> - https://react-ko.dev/reference/react-dom/createPortal
+
+```jsx
+import { createPortal } from 'react-dom';
+
+<div>
+	<MyComponent />
+  {createPortal(children, domNode, key?)}
+</div>
+```
+
+`createPortal`은 일부 자식을 DOM의 다른 부분에 렌더링한다. 이때 물리적인 위치만 변경될 뿐, 포털을 렌더링하는 부모 React 컴포넌트 하위의 자식 컴포넌트처럼 행동한다. 예를 들어 상위에서 제공하는 컨텍스트에 접근할 수 있고 이벤트도 물리적인 DOM 트리가 아니라 React 트리에 따라 자식에서 부모로 버블링된다.
+
+### 매개변수
+
+- `children`: React로 렌더링할 수 있는 모든 것이다.
+- `domNode`: 이미 DOM 트리 내부에 존재하는 DOM 엘리먼트이다.
+- `key`(optional): 포털의 키로 사용할 고유한 문자열 또는 숫자이다.
+
+### 반환값
+
+React 노드를 반환한다. React는 렌더링 출력에서 이 노드를 만나면 `children`을 `domNode` 안에 배치한다.
+
+### DOM의 다른 부분으로 렌더링하기
+
+```jsx
+import { createPortal } from 'react-dom';
+
+export default function MyComponent() {
+  return (
+    <div>
+      <p>div가 부모이다!</p>
+      {createPortal(<p>document.body가 부모이다!</p>, document.body)}
+    </div>
+  );
+}
+
+<body>
+  <div id="root">
+    <div>
+      <p>div가 부모이다!</p>
+    </div>
+  </div>
+  <p>document.body가 부모이다!</p>
+</body>
+```
+
+원래라면 React 루트의 첫번째 자식 `div`의 하위에 물리적으로 배치되겠지만, `document.body` 하위에 물리적으로 배치된다.
+
 ## flushSync
 
-TODO: https://react-ko.dev/reference/react-dom/flushSync
+> 출처
+>
+> - https://react-ko.dev/reference/react-dom/flushSync
 
 ```jsx
 import { flushSync } from 'react-dom';
@@ -3521,9 +3576,17 @@ flushSync(() => {
 // 이후부터는 DOM이 업데이트되어있다.
 ```
 
-`flushSync`는 전달된 콜백을 즉시 호출하고 내부의 모든 업데이트를 동기적으로 flush한다. 따라서 `flushSync`로 감싼 콜백이 실행된 직후 DOM이 업데이트된다.
+`flushSync`는 전달된 콜백을 즉시 호출하고 내부의 모든 업데이트를 동기적으로 flush한다. 따라서 `flushSync`로 감싼 콜백이 실행된 직후 **DOM이 업데이트된다**.
 
-### 상태 동기적으로 DOM에 업데이트하기
+### 매개변수 `callback`
+
+함수이다. React는 `flushSync`가 호출되면 콜백을 즉시 호출하고 콜백 내부의 모든 업데이트(pending 업데이트, Effect, Effect 내부의 업데이트)를 동기적으로 flush한다. 업데이트가 `flushSync` 호출의 결과로 suspend되면 fallback이 다시 표시된다.
+
+### 반환값
+
+`undefined`를 반환한다.
+
+### 상태를 동기적으로 DOM에 업데이트하기
 
 > **출처**
 >
@@ -3539,19 +3602,42 @@ function handleAdd() {
 새로운 todo가 추가될 때마다 스크롤을 가장 하단으로 내리고 싶을 수 있다. 그러나 `set` 함수는 동기적으로 실행되지 않으므로 스크롤은 한 항목 위로 스크롤된다. 이 경우 `set` 함수의 실행을 동기적으로 강제하면 된다.
 
 ```jsx
-import { flushSync } from 'react-dom';
+import { useState, useRef } from "react";
 
-function handleAdd() {
-    flushSync(() => {
-        setTodos([...todos, { id: uuid(), text }]);
-    });
-    listRef.current.lastChild.scrollIntoView();
+let nextId = 0;
+export default function App() {
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const [todos, setTodos] = useState<{ id: number; text: string }[]>(
+    [...Array(50)].map((_, idx) => ({ id: nextId++, text: `${idx}` })),
+  );
+  const [text, setText] = useState("");
+
+  function handleAdd(): void {
+    setTodos([...todos, { id: nextId++, text }]);
+    setText("");
+    if (listRef.current && listRef.current.lastChild instanceof HTMLElement) {
+      listRef.current.lastChild?.scrollIntoView();
+    }
+  }
+
+  return (
+    <div>
+      <input value={text} onChange={(e) => setText(e.target.value)} />
+      <button onClick={handleAdd}>add</button>
+      <ul ref={listRef}>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.text}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
+
 ```
 
 `flushSync`로 감싼 코드가 실행된 직후 React는 DOM을 동기적으로 업데이트하도록 한다. 그래서 `listRef.current.lastChild`는 의도했던 대로 새로 업데이트된 todo를 표시한 DOM 노드를 가리키게 된다.
 
-### 단, React가 상태를 동기적으로 업데이트하는 것은 아니다
+### 단, React가 React 상태를 동기적으로 업데이트하는 것은 아니다
 
 ```javascript
 function handleAdd() {
@@ -3567,13 +3653,36 @@ function handleAdd() {
 
 이때 콘솔 결과는 같지 않다. 전자는 상태가 갱신되기 전 `todos`의 마지막 요소를, 후자는 상태가 갱신된 후의 `todos`의 마지막 요소를 가리킨다. React 자체는 상태를 비동기적으로 갱신하여 React는 다음 렌더링의 값에 접근하지 않는다. `flushSync`는 `react-dom`의 API로, DOM의 동기적 갱신을 보장한다. (TODO)
 
+## createRoot
 
+> **출처**
+>
+> - https://react-ko.dev/reference/react-dom/client/createRoot
+
+```jsx
+import ReactDOM from 'react-dom/client';
+
+const root = ReactDOM.createRoot(domNode, options?);
+```
+
+`createRoot`로 브라우저 DOM 노드 안에 React 컴포넌트를 표시하는 루트를 만들 수 있다.
+
+### 매개변수
+
+- `domNode`: React 루트를 표시할 DOM 엘리먼트이다.
+- `options`(optional): React 루트에 대한 옵션을 담은 객체이다.
+  - `onRecoverableError`(optional): React가 오류로부터 자동적으로 복구될 때 호출할 콜백이다.
+  - `identifierPrefix`(optional): `useId`로부터 생성된 ID에 사용할 문자열 접두사이다.
+
+### 반환값
+
+`render`와 `unmount` 메서드를 가진 객체를 반환한다.
 
 ***
 
 ## `<SctirctMode>`
 
-> 출처
+> **출처**
 >
 > - https://react-ko.dev/reference/react/StrictMode
 
@@ -3611,7 +3720,7 @@ React 컴포넌트는 순수 함수로 동일한 입력에 대해 항상 동일�
 - `findDOMNode`
 - `UNSAFE_componentWillMount`와 같은 `UNSAFE_` 클래스 라이프 사이클 메서드
 - 레거시 컨텍스트(`childContextTypes`, `contextTypes`, `getChildContext`)
-- 렉ㅓ시 문자열 refs(`this.refs`)
+- 레거시 문자열 refs(`this.refs`)
 
 ## `<Fragment>(<>)`
 
