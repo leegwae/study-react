@@ -3678,6 +3678,38 @@ const root = ReactDOM.createRoot(domNode, options?);
 
 `render`와 `unmount` 메서드를 가진 객체를 반환한다.
 
+### `render` 메서드
+
+```jsx
+root.render(reactNode);
+```
+
+React 루트에 `reactNode`를 표시한다.
+
+- 매개변수 `reactNode`: react 루트에 표시할 React 노드이다.
+- 반환값 `undefined`
+
+### `render` 메서드의 동작
+
+- `render` 메서드를 처음으로 호출하면 React 루트 내부에 이미 있는 HTML 컨텐츠를 지운다.
+- `render` 메서드를 다시 호출하면 `set` 함수를 호출할 때처럼 이전 렌더링 트리와 비교하여 필요한 부분만 다시 만든다.
+
+### `unmount` 메서드
+
+```jsx
+root.unmount();
+```
+
+React 루트 내부에 렌더링된 트리를 삭제하고, 트리 내부의 이벤트 핸들러와 state를 포함한 React가 루트 DOM 노드에서부터 분리된다.
+
+- 매개변수를 받지 않는다.
+- 반환값 `undefined`
+
+### `unmount` 메서드의 동작
+
+- `unmount` 메서드를 호출한 후에는 바인딩된 루트 객체의 `render` 메서드를 호출할 수 없다.
+- 단, 동일한 DOM 노드에 다른 루트 객체의 `render` 메서드를 호출할 수는 있다.
+
 ***
 
 ## `<SctirctMode>`
