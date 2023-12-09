@@ -3700,7 +3700,7 @@ React 루트에 `reactNode`를 표시한다.
 root.unmount();
 ```
 
-React 루트 내부에 렌더링된 트리를 삭제하고, 트리 내부의 이벤트 핸들러와 state를 포함한 React가 루트 DOM 노드에서부터 분리된다.
+`unmount` 메서드를 호출하여 루트 내부의 모든 컴포넌트를 언마운트하고 트리 내부의 이벤트 핸들러나 state를 모두 삭제하는 등 React를 루트로부터 떼어낸다.
 
 - 매개변수를 받지 않는다.
 - 반환값 `undefined`
@@ -3709,6 +3709,94 @@ React 루트 내부에 렌더링된 트리를 삭제하고, 트리 내부의 이
 
 - `unmount` 메서드를 호출한 후에는 바인딩된 루트 객체의 `render` 메서드를 호출할 수 없다.
 - 단, 동일한 DOM 노드에 다른 루트 객체의 `render` 메서드를 호출할 수는 있다.
+
+## hydrateRoot
+
+> **출처**
+>
+> - https://react-ko.dev/reference/react-dom/client/hydrateRoot
+
+```jsx
+import { hydrateRoot } from 'react-dom/client';
+
+const root = hydrateRoot(domNode, reactNode, options?);
+```
+
+`hydrateRoot`는 서버사이드에서 이미 만들어진 HTML(예: `react-dom/server`로 생성한 HTML 컨텐츠)에 `reactNode`를 붙인다. hydration 과정을 거치면 HTML 완전히 인터렉티브한 애플리케이션이 된다. 이때 hydration 이전 렌더링 트리(서버사이드)와 hydration 이후 렌더링 트리(클라이언트사이드)는 동일해야 이벤트 핸들러가 다른 엘리먼트에 붙는 등 버그를 생성하지 않는다. 
+
+### 매개변수
+
+- `domNode`: 서버사이드에서 루트 엘리먼트로 렌더링된 DOM 엘리먼트이다.
+- `reactNode`: 이미 렌더링된 HTML에 렌더링할 React 노드이다.
+- `options`(optional): React 루트에 대한 옵션을 담은 객체이다.
+  - `onRecoverableError`(optional): React가 오류로부터 자동적으로 복구될 때 호출할 콜백이다.
+  - `identifierPrefix`(optional): `useId`로부터 생성된 ID에 사용할 문자열 접두사이다.
+
+### 반환값
+
+`render`와 `unmount` 메서드를 가진 객체를 반환한다.
+
+### `render` 메서드
+
+```jsx
+root.render(reactNode);
+```
+
+`render` 메서드를 호출하여 hydrate된 React 루트 내부의 React 컴포넌트를 `reactNode`로 업데이트한다.
+
+- 매개변수 `reactNode`: 업데이트해 표시할 React 노드이다.
+- 반환값 `undefined`
+
+### `render` 메서드의 동작
+
+- 루트 hydrate가 완료되기 전에 `render` 메서드를 호출하면 React는 서버 렌더링된 HTML 컨텐츠를 지우고 전체 루트를 클라이언트 렌더링된 컨텐츠로 대체한다.
+
+### `unmount` 메서드
+
+```jsx
+root.unmount();
+```
+
+`unmount` 메서드를 호출하여 루트 내부의 모든 컴포넌트를 언마운트하고 트리 내부의 이벤트 핸들러나 state를 모두 삭제하는 등 React를 루트로부터 떼어낸다.
+
+- 매개변수를 받지 않는다.
+- 반환값 `undefined`
+
+### `unmount` 메서드의 동작
+
+- `unmount` 메서드를 호출한 후에는 바인딩된 루트 객체의 `render` 메서드를 호출할 수 없다.
+
+### hydration mismatch error 끄기
+
+```jsx
+export default function App() {
+  return (
+    <h1 suppressHydrationWarning={true}>
+      현재 날짜: {new Date().toLocaleDateString()}
+    </h1>
+  );
+}
+```
+
+엘리먼트의 컨텐츠나 속성이 서버와 클라이언트 사이드에서 다를 수밖에 없는 경우 엘리먼트의 속성`suppressHydrationWarning`을 `true`로 전달해 mismatch 경고를 끌 수 있다.
+
+### 클라이언트 사이드인지 확인하기
+
+클라이언트 사이드인지 `useEffect`를 사용해 확인할 수 있다. `useEffect`는 클라이언트 사이드에서만 실행되는 훅이기 때문이다.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+export function isClient() {
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  return isClient;
+}
+```
 
 ***
 
